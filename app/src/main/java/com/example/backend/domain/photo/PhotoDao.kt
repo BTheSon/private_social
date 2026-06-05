@@ -1,4 +1,4 @@
-package com.example.data
+package com.example.backend.domain.photo
 
 import androidx.room.Dao
 import androidx.room.Delete

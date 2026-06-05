@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.example.frontend.screens.gallery
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -32,8 +32,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.example.data.PhotoEntity
-import com.example.ui.PhotoViewModel
+import com.example.backend.common.util.DateTimeUtils
+import com.example.backend.domain.photo.PhotoEntity
+import com.example.backend.domain.photo.PhotoViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -122,7 +123,7 @@ fun GalleryScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Ảnh Chụp ${photoToPreview?.let { formatTimestamp(it.timestamp) }}",
+                        text = "Ảnh Chụp ${photoToPreview?.let { DateTimeUtils.formatTimestamp(it.timestamp) }}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,

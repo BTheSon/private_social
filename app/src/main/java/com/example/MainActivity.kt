@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,29 +18,30 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.data.PhotoDatabase
-import com.example.data.PhotoRepository
-import com.example.ui.PhotoViewModel
-import com.example.ui.PhotoViewModelFactory
-import com.example.ui.screens.CameraScreen
-import com.example.ui.screens.GalleryScreen
-import com.example.ui.theme.MyApplicationTheme
+import com.example.backend.domain.photo.PhotoDatabase
+import com.example.backend.domain.photo.PhotoRepository
+import com.example.backend.domain.photo.PhotoViewModel
+import com.example.backend.domain.photo.PhotoViewModelFactory
+import com.example.frontend.screens.camera.CameraScreen
+import com.example.frontend.screens.gallery.GalleryScreen
+import com.example.frontend.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,13 +79,13 @@ class MainActivity : ComponentActivity() {
                     // Floating Glass Dock at the bottom
                     Box(
                         modifier = Modifier
-                            .align(androidx.compose.ui.Alignment.BottomCenter)
+                            .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
                             .padding(bottom = 16.dp, start = 24.dp, end = 24.dp)
                             .fillMaxWidth(0.85f)
                             .background(
                                 color = Color(0xDC121212), // Deep pitch black glass
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+                                shape = RoundedCornerShape(28.dp)
                             )
                             .border(
                                 width = 1.dp,
@@ -94,12 +96,12 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Camera Screen Tab Button
                             val cameraSelected = activeTab == 0
-                            androidx.compose.material3.IconButton(
+                            IconButton(
                                 onClick = { viewModel.setActiveTab(0) },
                                 modifier = Modifier
                                     .weight(1f)
@@ -110,8 +112,8 @@ class MainActivity : ComponentActivity() {
                                     )
                             ) {
                                 Row(
-                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
                                     Icon(
                                         imageVector = if (cameraSelected) Icons.Filled.PhotoCamera else Icons.Outlined.PhotoCamera,
@@ -124,8 +126,8 @@ class MainActivity : ComponentActivity() {
                                         Text(
                                             text = "Máy Ảnh",
                                             color = Color(0xFFFFCC00),
-                                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
@@ -135,7 +137,7 @@ class MainActivity : ComponentActivity() {
 
                             // Gallery Screen Tab Button
                             val gallerySelected = activeTab == 1
-                            androidx.compose.material3.IconButton(
+                            IconButton(
                                 onClick = { viewModel.setActiveTab(1) },
                                 modifier = Modifier
                                     .weight(1f)
@@ -146,8 +148,8 @@ class MainActivity : ComponentActivity() {
                                     )
                             ) {
                                 Row(
-                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
                                     Icon(
                                         imageVector = if (gallerySelected) Icons.Filled.GridView else Icons.Outlined.GridView,
@@ -160,8 +162,8 @@ class MainActivity : ComponentActivity() {
                                         Text(
                                             text = "Lưu Trữ",
                                             color = Color(0xFFFFCC00),
-                                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }

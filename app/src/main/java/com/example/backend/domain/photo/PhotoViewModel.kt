@@ -1,4 +1,4 @@
-package com.example.ui
+package com.example.backend.domain.photo
 
 import android.app.Application
 import android.content.Context
@@ -15,9 +15,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.data.PhotoDatabase
-import com.example.data.PhotoEntity
-import com.example.data.PhotoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
