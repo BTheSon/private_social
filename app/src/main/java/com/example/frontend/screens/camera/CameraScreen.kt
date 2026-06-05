@@ -94,143 +94,150 @@ fun CameraScreen(
 fun TimelinePhotoItem(
     photo: PhotoEntity,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
             .testTag("timeline_photo_item_${photo.id}"),
-        contentAlignment = Alignment.TopCenter
+        contentAlignment = Alignment.Center
     ) {
-        // Main Polaroid Card Container
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp), // Leave space for the washi tape overlay
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF181818)),
-            shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, Color(0xFF2C2C2C))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp)
-            ) {
-                // 1x1 Photo Frame resembling a sleek, thick-bordered Polaroid cutout
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.Black)
-                        .border(1.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
-                ) {
-                    AsyncImage(
-                        model = photo.filePath,
-                        contentDescription = "Timeline snapshot file",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    
-                    // Mini live badge overlay inside photo
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                            .border(0.5.dp, Color(0xFFFFCC00), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "LOCKET #${photo.id}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFFFCC00),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Bottom strip containing timestamp details and quick actions
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Gửi lúc • ${DateTimeUtils.formatTimestamp(photo.timestamp).split(" ")[1]}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            fontSize = 15.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = DateTimeUtils.formatTimestamp(photo.timestamp).split(" ")[0],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    // Tactile delete action indicator
-                    IconButton(
-                        onClick = onLongClick,
-                        modifier = Modifier
-                            .background(Color(0xFF222222), CircleShape)
-                            .size(36.dp)
-                            .testTag("delete_button_${photo.id}")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.DeleteOutline,
-                            contentDescription = "Xóa ảnh",
-                            tint = Color(0xFFFFCC00),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Giữ lâu trên ảnh để xóa khỏi bộ nhớ thiết bị",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.DarkGray,
-                    fontSize = 10.sp,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Start
-                )
-            }
-        }
-
-        // Custom "Washi Tape" graphic element to anchor the polaroid sheet to the wall layout
         Box(
             modifier = Modifier
-                .width(76.dp)
-                .height(14.dp)
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xCCFFCC00),
-                            Color(0xDDFFD54F),
-                            Color(0xCCFFCC00)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            // Main Polaroid Card Container
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp), // Leave space for the washi tape overlay
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF181818)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFF2C2C2C))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    // 1x1 Photo Frame resembling a sleek, thick-bordered Polaroid cutout
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.Black)
+                            .border(1.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
+                    ) {
+                        AsyncImage(
+                            model = photo.filePath,
+                            contentDescription = "Timeline snapshot file",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
-                    ),
-                    shape = RoundedCornerShape(2.dp)
-                )
-                .border(
-                    width = 0.5.dp,
-                    color = Color(0x33FFFFFF),
-                    shape = RoundedCornerShape(2.dp)
-                )
-        )
+                        
+                        // Mini live badge overlay inside photo
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(12.dp)
+                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                .border(0.5.dp, Color(0xFFFFCC00), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "LOCKET #${photo.id}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFFFCC00),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Bottom strip containing timestamp details and quick actions
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Gửi lúc • ${DateTimeUtils.formatTimestamp(photo.timestamp).split(" ")[1]}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                fontSize = 15.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = DateTimeUtils.formatTimestamp(photo.timestamp).split(" ")[0],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        // Tactile delete action indicator
+                        IconButton(
+                            onClick = onLongClick,
+                            modifier = Modifier
+                                .background(Color(0xFF222222), CircleShape)
+                                .size(36.dp)
+                                .testTag("delete_button_${photo.id}")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.DeleteOutline,
+                                contentDescription = "Xóa ảnh",
+                                tint = Color(0xFFFFCC00),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Giữ lâu trên ảnh để xóa khỏi bộ nhớ thiết bị",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.DarkGray,
+                        fontSize = 10.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start
+                    )
+                }
+            }
+
+            // Custom "Washi Tape" graphic element to anchor the polaroid sheet to the wall layout
+            Box(
+                modifier = Modifier
+                    .width(76.dp)
+                    .height(14.dp)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xCCFFCC00),
+                                Color(0xDDFFD54F),
+                                Color(0xCCFFCC00)
+                            )
+                        ),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+                    .border(
+                        width = 0.5.dp,
+                        color = Color(0x33FFFFFF),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+            )
+        }
     }
 }
 

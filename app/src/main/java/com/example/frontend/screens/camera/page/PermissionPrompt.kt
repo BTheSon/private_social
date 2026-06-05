@@ -56,7 +56,7 @@ fun PermissionPrompt(onRequestPermission: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Camera 1x1 yêu cầu quyền truy cập Camera của hệ thống để hiển thị kính ngắm và lưu giữ những bức ảnh vuông chất lượng cao cực chất.",
+            text = "Ứng dụng yêu cầu quyền truy cập Camera của hệ thống để hiển thị kính ngắm và lưu giữ những bức ảnh vuông chất lượng cao cực chất.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.LightGray,
             textAlign = TextAlign.Center,

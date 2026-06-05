@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.backend.domain.photo.PhotoEntity
 import com.example.frontend.screens.camera.TimelinePhotoItem
 
@@ -29,6 +31,9 @@ fun TimelineHistoryPage(
     onPhotoClick: (PhotoEntity) -> Unit,
     onPhotoLongClick: (PhotoEntity) -> Unit
 ) {
+    val lazyListState = rememberLazyListState()
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = lazyListState)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -90,14 +95,16 @@ fun TimelineHistoryPage(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp)
+                state = lazyListState,
+                flingBehavior = snapFlingBehavior,
+                modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 items(photos, key = { it.id }) { photo ->
                     TimelinePhotoItem(
                         photo = photo,
                         onClick = { onPhotoClick(photo) },
-                        onLongClick = { onPhotoLongClick(photo) }
+                        onLongClick = { onPhotoLongClick(photo) },
+                        modifier = Modifier.fillParentMaxHeight()
                     )
                 }
             }
