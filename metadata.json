@@ -1,0 +1,6 @@
+{
+  "name": "Camera 1x1",
+  "description": "Ứng dụng máy ảnh tự chế tùy biến giao diện, chụp ảnh tỉ lệ 1x1 siêu nét và quản lý album ảnh dạng grid 3 cột cục bộ",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
