@@ -289,7 +289,8 @@ fun CameraViewfinder(
             Log.e("CameraViewfinder", "Use case binding failed", e)
         }
     }
-
+    // compose này nhúng cameraX vào jetpack compose
+    // tương tự việc dùng <androidx.camera.view.PreviewView />
     AndroidView(
         factory = {
             previewView.apply {

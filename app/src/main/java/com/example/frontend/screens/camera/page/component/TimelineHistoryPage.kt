@@ -19,8 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import com.example.backend.domain.photo.PhotoEntity
 import com.example.frontend.screens.camera.TimelinePhotoItem
 
@@ -31,8 +31,7 @@ fun TimelineHistoryPage(
     onPhotoClick: (PhotoEntity) -> Unit,
     onPhotoLongClick: (PhotoEntity) -> Unit
 ) {
-    val lazyListState = rememberLazyListState()
-    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = lazyListState)
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { photos.size })
 
     Column(
         modifier = Modifier
@@ -48,33 +47,17 @@ fun TimelineHistoryPage(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color(0x1AFFCC00), CircleShape)
-                        .border(1.dp, Color(0xFFFFCC00).copy(alpha = 0.3f), CircleShape)
-                ) {
-                    Icon(Icons.Default.PhotoCamera, "Quay về máy ảnh", tint = Color(0xFFFFCC00), modifier = Modifier.size(18.dp))
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "KHOẢNH KHẮC GẦN ĐÂY", style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 0.5.sp
-                    )
-                    Text("Nhật ký Locket cá nhân cực chất", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                }
-            }
-
-            Box(
+            IconButton(
+                onClick = onBackClick,
                 modifier = Modifier
-                    .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .size(40.dp)
+                    .background(Color(0x1AFFCC00), CircleShape)
+                    .border(1.dp, Color(0xFFFFCC00).copy(alpha = 0.3f), CircleShape)
             ) {
-                Text("${photos.size} KHOẢNH KHẮC", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFCC00), fontWeight = FontWeight.Black)
+                Icon(Icons.Default.PhotoCamera, "Quay về máy ảnh", tint = Color(0xFFFFCC00), modifier = Modifier.size(18.dp))
             }
+//            Row(verticalAlignment = Alignment.CenterVertically) {
+//            }
         }
 
         HorizontalDivider(color = Color(0xFF222222), thickness = 1.dp)
@@ -94,19 +77,18 @@ fun TimelineHistoryPage(
                 }
             }
         } else {
-            LazyColumn(
-                state = lazyListState,
-                flingBehavior = snapFlingBehavior,
-                modifier = Modifier.weight(1f).fillMaxWidth()
-            ) {
-                items(photos, key = { it.id }) { photo ->
-                    TimelinePhotoItem(
-                        photo = photo,
-                        onClick = { onPhotoClick(photo) },
-                        onLongClick = { onPhotoLongClick(photo) },
-                        modifier = Modifier.fillParentMaxHeight()
-                    )
-                }
+            VerticalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                key = { page -> photos[page].id }
+            ) { page ->
+                val photo = photos[page]
+                TimelinePhotoItem(
+                    photo = photo,
+                    onClick = { onPhotoClick(photo) },
+                    onLongClick = { onPhotoLongClick(photo) },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
