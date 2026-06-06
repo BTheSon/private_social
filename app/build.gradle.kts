@@ -4,14 +4,15 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
+  id("com.google.gms.google-services")
 }
 
 android {
-  namespace = "com.example"
+  namespace = "com.Locket"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.squarecamera.fhyuz"
+    applicationId = "com.Locket"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -118,4 +119,11 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
+
+  // Thêm Firebase Auth
+  implementation(libs.firebase.auth)
+  implementation(libs.androidx.browser)
+
+  // Thư viện hỗ trợ Coroutines cho Firebase (để dùng .await())
+  implementation(libs.kotlinx.coroutines.play.services)
 }
