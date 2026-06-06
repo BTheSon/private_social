@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-  namespace = "com.Locket"
+  namespace = "com.locket"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
@@ -122,6 +122,7 @@ dependencies {
 
   // Thêm Firebase Auth
   implementation(libs.firebase.auth)
+  implementation(libs.firebase.database)
   implementation(libs.androidx.browser)
 
   // Thư viện hỗ trợ Coroutines cho Firebase (để dùng .await())
