@@ -10,7 +10,7 @@ import com.example.backend.domain.photo.PhotoDao
 import com.example.backend.domain.photo.PhotoEntity
 import com.example.backend.domain.user.UserEntity
 
-@Database(entities = [PhotoEntity::class, UserEntity::class, FriendshipEntity::class], version = 1, exportSchema = false)
+@Database(entities = [PhotoEntity::class, UserEntity::class, FriendshipEntity::class], version = 2, exportSchema = false)
 abstract class MDatabase : RoomDatabase() {
     abstract fun photoDao(): PhotoDao
     abstract fun friendDao(): FriendDao
@@ -26,8 +26,8 @@ abstract class MDatabase : RoomDatabase() {
                     MDatabase::class.java,
                     "photo_database"
                 )
-                    .fallbackToDestructiveMigration(false)
-                .build()
+                    .fallbackToDestructiveMigration(true)
+                    .build()
                 INSTANCE = instance
                 instance
             }
