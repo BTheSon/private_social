@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import com.example.backend.domain.photo.PhotoEntity
-import com.example.frontend.screens.camera.TimelinePhotoItem
 
 @Composable
 fun TimelineHistoryPage(
