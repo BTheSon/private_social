@@ -18,8 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+<<<<<<< HEAD:app/src/main/java/com/Locket/frontend/screens/camera/page/component/TimelineHistoryPage.kt
 import com.Locket.backend.domain.photo.PhotoEntity
 import com.Locket.frontend.screens.camera.TimelinePhotoItem
+=======
+import com.example.backend.domain.photo.PhotoEntity
+>>>>>>> 78b6d59b277b6ffdb649357868d2e72d01e5e230:app/src/main/java/com/example/frontend/screens/camera/page/component/TimelineHistoryPage.kt
 
 @Composable
 fun TimelineHistoryPage(

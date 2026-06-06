@@ -3,15 +3,35 @@ package com.Locket.frontend.screens.camera.page.component
 import androidx.camera.core.ImageCapture
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlipCameraAndroid
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -47,28 +67,12 @@ fun CameraViewfinderPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Top bar
-        Row(
+        // Top bar - Xóa các text thừa như LOCKET 1:1 LIVE, chỉ chừa Spacer statusBarsPadding
+        Spacer(
             modifier = Modifier
-                .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(8.dp).background(Color(0xFFFFCC00), CircleShape))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "LOCKET 1:1 LIVE", color = Color.White,
-                    style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
-                )
-            }
-            Text(
-                text = "100% SECURE DIRECT", color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Normal, letterSpacing = 0.5.sp
-            )
-        }
+                .height(16.dp)
+        )
 
         // Camera Preview Box
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -167,20 +171,15 @@ fun CameraViewfinderPage(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Scroll Helper Text
-            Row(
+            // Scroll Helper Icon tối giản (không có text thừa)
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Cuộn lên xem lịch sử",
+                tint = Color(0xFFFFCC00).copy(alpha = 0.6f),
                 modifier = Modifier
+                    .size(24.dp)
                     .combinedClickable(onClick = onHistoryClick)
-                    .padding(vertical = 4.dp, horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.KeyboardArrowDown, null, tint = Color(0xFFFFCC00), modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "CUỘN LÊN XEM LỊCH SỬ KHOẢNH KHẮC", color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
-                )
-            }
+            )
         }
     }
 }
