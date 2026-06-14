@@ -17,6 +17,8 @@ import com.locket.backend.domain.friend.FriendsViewModelFactory
 import com.locket.backend.domain.photo.PhotoRepository
 import com.locket.backend.domain.photo.PhotoViewModel
 import com.locket.backend.domain.photo.PhotoViewModelFactory
+import com.locket.backend.domain.profile.ProfileViewModel
+import com.locket.backend.domain.profile.ProfileViewModelFactory
 import com.locket.backend.domain.user.UserRepository
 import com.locket.frontend.screens.auth.AuthScreen
 import com.locket.frontend.screens.main.MainScreen
@@ -57,6 +59,12 @@ class MainActivity : ComponentActivity() {
             AuthViewModelFactory(userRepository)
         }
 
+        // Profile
+
+        val profileViewModel: ProfileViewModel by viewModels {
+            ProfileViewModelFactory(userRepository)
+        }
+
         setContent {
             MyApplicationTheme(darkTheme = true) {
                 val navController = rememberNavController()
@@ -79,7 +87,14 @@ class MainActivity : ComponentActivity() {
                     composable("main") {
                         MainScreen(
                             photoViewModel = photoViewModel,
-                            friendViewModel = friendViewModel
+                            friendViewModel = friendViewModel,
+                            profileViewModel = profileViewModel,
+                            onNavigateToAuth = {
+                                // Khi đăng xuất, xóa toàn bộ lịch sử (stack) và quay về màn hình auth
+                                navController.navigate("auth") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
                         )
                     }
                 }
