@@ -12,4 +12,8 @@ class UserRepository(private val userDao: UserDao) {
     }
 
     fun getMyProfileFlow() = userDao.getUserFlow()
+
+    suspend fun clearMyProfile() {
+        userDao.clearUserFlag() // Hàm này đã được khai báo ở UserDao trong các bước trước
+    }
 }
