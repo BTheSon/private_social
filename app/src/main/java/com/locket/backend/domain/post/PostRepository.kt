@@ -4,14 +4,15 @@ import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.storage.storage
+import com.locket.backend.service.FirebaseClientService
+import com.locket.backend.service.SupabaseClientService
 import java.util.UUID
 
-class PostRepository(
-    private val supabase: SupabaseClient
-    // private val database: FirebaseDatabase // Uncomment and use if needed
-) {
+class PostRepository {
+    private val supabase = SupabaseClientService.client
+    private val database = FirebaseClientService.database
+
     suspend fun uploadImageToSupabase(uri: Uri, bytes: ByteArray): String? {
         return withContext(Dispatchers.IO) {
             try {
@@ -28,9 +29,9 @@ class PostRepository(
     suspend fun savePost(post: PostModel): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                // Here you would use Firebase Database to save the post.
-                // val ref = database.getReference("posts").child(post.id.ifEmpty { UUID.randomUUID().toString() })
-                // ref.setValue(post).await()
+                val ref = database.getReference("posts").child(post.id.ifEmpty { UUID.randomUUID().toString() })
+                val finalPost = post.copy(id = ref.key ?: post.id)
+                ref.setValue(finalPost).await()
                 true
             } catch (e: Exception) {
                 false
@@ -41,10 +42,8 @@ class PostRepository(
     suspend fun getPosts(): List<PostModel> {
         return withContext(Dispatchers.IO) {
             try {
-                // Fetch from Firebase Database here
-                // val snapshot = database.getReference("posts").get().await()
-                // snapshot.children.mapNotNull { it.getValue(PostModel::class.java) }
-                emptyList()
+                val snapshot = database.getReference("posts").get().await()
+                snapshot.children.mapNotNull { it.getValue(PostModel::class.java) }
             } catch (e: Exception) {
                 emptyList()
             }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.locket.backend.domain.user.UserEntity
 import com.locket.backend.domain.user.UserRepository
+import com.locket.backend.service.FirebaseClientService
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -19,7 +20,7 @@ class ProfileViewModel(private val userRepository: UserRepository) : ViewModel()
 
     fun logout(onLogoutSuccess: () -> Unit) = viewModelScope.launch {
         // 1. Đăng xuất khỏi Firebase Auth
-        FirebaseAuth.getInstance().signOut()
+        FirebaseClientService.auth.signOut()
 
         // 2. Xóa trạng thái đăng nhập cục bộ trong Room
         userRepository.clearMyProfile()

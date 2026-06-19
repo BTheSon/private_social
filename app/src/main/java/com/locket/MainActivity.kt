@@ -65,6 +65,23 @@ class MainActivity : ComponentActivity() {
             ProfileViewModelFactory(userRepository)
         }
 
+        // Post & Feed
+
+        val postRepository = com.locket.backend.domain.post.PostRepository()
+        
+        val retrofit = retrofit2.Retrofit.Builder()
+            .baseUrl("https://itunes.apple.com/")
+            .addConverterFactory(retrofit2.converter.moshi.MoshiConverterFactory.create())
+            .build()
+        val itunesApiService = retrofit.create(com.locket.backend.domain.music.ItunesApiService::class.java)
+        val itunesRepository = com.locket.backend.domain.music.ItunesRepository(itunesApiService)
+
+        val postViewModel: com.locket.backend.domain.post.PostViewModel by viewModels {
+            com.locket.backend.domain.post.PostViewModelFactory(postRepository, itunesRepository)
+        }
+
+        val sharedPostViewModel: com.locket.backend.domain.post.SharedPostViewModel by viewModels()
+
         setContent {
             MyApplicationTheme(darkTheme = true) {
                 val navController = rememberNavController()
@@ -89,6 +106,8 @@ class MainActivity : ComponentActivity() {
                             photoViewModel = photoViewModel,
                             friendViewModel = friendViewModel,
                             profileViewModel = profileViewModel,
+                            postViewModel = postViewModel,
+                            sharedPostViewModel = sharedPostViewModel,
                             onNavigateToAuth = {
                                 // Khi đăng xuất, xóa toàn bộ lịch sử (stack) và quay về màn hình auth
                                 navController.navigate("auth") {
