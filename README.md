@@ -110,10 +110,6 @@ Dự án được xây dựng nhằm áp dụng các kiến thức về phát tr
 * Kotlin Coroutines
 * Kotlin Flow
 
-### Dependency Injection
-
-* Hilt
-
 ---
 
 ## Kiến trúc hệ thống
@@ -133,7 +129,98 @@ Repository Layer
 Firestore    Supabase      Room DB
 (Auth/Data)  (Storage)     (Cache)
 ```
+Csdl của dự án sửa dụng json tree của realtime database với cấu trúc cơ bản như sau
 
+```json
+{
+  "users": {
+    "<phone_number>": {
+      "displayName": "Bùi Thế Sơn",
+      "avatarUrl": "https://firebasestorage...", 
+      "fcmToken": "<token_de_gui_push_notification>" 
+    }
+  },
+
+  "friendships": {
+    "<my_phone_number>": {
+      "<friend_phone_number>": {
+        "status": "ACCEPTED",
+        "senderPhone": "<my_phone_number>", 
+        "timestamp": 1717650000
+      }
+    }
+  },
+
+  "photos": {
+    "<photo_id>": {
+      "senderPhone": "<phone_number>",
+      "imageUrl": "https://firebasestorage...",
+      "musicUrl": "https://firebasestorage...", 
+      "description": "Cà phê sáng",
+      "timestamp": 1717650000,
+      "reactionCount": 5 
+    }
+  },
+
+  "photo_reactions": {
+    "<photo_id>": {
+      "<friend_phone_number_1>": "❤️",
+      "<friend_phone_number_2>": "😂"
+    }
+  },
+
+  "user_feeds": {
+    "<phone_number>": {
+      "<photo_id>": 1717650000
+    }
+  },
+
+  "chats": {
+    "<chat_room_id>": {
+      "<message_id>": {
+        "senderPhone": "<phone_number>",
+        "message": "Trời hôm nay đẹp quá!",
+        "type": "text", 
+        "replyPhotoId": "<photo_id>", 
+        "timestamp": 1717650020
+      }
+    }
+  }
+}
+```
+
+Rằng buộc cho các thao tác với json tree
+```json
+{
+  "rules": {
+    "photos": {
+      ".read": "auth != null",
+      "$photo_id": {
+        // Cho phép tạo mới.
+        // Nếu sửa/xóa (dữ liệu đã tồn tại), senderPhone phải trùng với SĐT đang đăng nhập.
+        ".write": "auth != null && (!data.exists() || data.child('senderPhone').val() === auth.uid)"
+      }
+    },
+
+    "chats": {
+      "$chat_room_id": {
+        // Chỉ người có SĐT nằm trong ID phòng chat mới được đọc tin nhắn
+        ".read": "auth != null && $chat_room_id.contains(auth.uid)",
+        
+        "$message_id": {
+          // Tạo mới: senderPhone phải là SĐT đang đăng nhập
+          // Sửa/Xóa: senderPhone cũ đã lưu phải là SĐT đang đăng nhập
+          ".write": "auth != null && (
+            (!data.exists() && newData.child('senderPhone').val() === auth.uid) 
+            || 
+            (data.exists() && data.child('senderPhone').val() === auth.uid)
+          )"
+        }
+      }
+    }
+  }
+}
+```
 ---
 
 ## Luồng đăng ảnh
@@ -186,10 +273,6 @@ bài đăng kèm tin nhắn được gửi trực tiếp vào hộp thoai
 
 ## Thành viên nhóm
 
-* Thành viên 1: ...
-* Thành viên 2: ...
-* Thành viên 3: ...
-
-## Giảng viên hướng dẫn
-
-* ...
+* Thành viên 1: Bùi Thế Sơn
+* Thành viên 2: Nguyễn Trần Thiên Bảo
+* Thành viên 3: Phan Nguyễn Gia Huy
