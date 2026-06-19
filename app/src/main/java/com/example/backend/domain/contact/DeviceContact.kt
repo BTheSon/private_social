@@ -1,4 +1,7 @@
 package com.example.backend.domain.contact
 
-class DeviceContact {
-}
+data class DeviceContact (
+    val name: String,
+    val rawPhoneNumber: String,
+    val normalizedPhoneNumber: String
+)
