@@ -127,4 +127,11 @@ dependencies {
 
   // Thư viện hỗ trợ Coroutines cho Firebase (để dùng .await())
   implementation(libs.kotlinx.coroutines.play.services)
+  
+  implementation(platform(libs.supabase.bom))
+
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.storage)
+    implementation(libs.supabase.postgrest)
+
 }

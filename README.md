@@ -1,278 +1,213 @@
-# Momently - Mạng xã hội chia sẻ khoảng khắc realtime
+# Momently - Mạng xã hội chia sẻ khoảnh khắc đồng bộ thời gian thực
 
-## Giới thiệu
+## Chức năng cơ bản
 
-Locket Clone là ứng dụng mạng xã hội chia sẻ ảnh được phát triển trên nền tảng Android bằng Jetpack Compose. Ứng dụng cho phép người dùng chụp và chia sẻ nhanh những khoảnh khắc hằng ngày với bạn bè, đồng thời tương tác thông qua các cảm xúc (reactions) và tin nhắn riêng tư.
-
-Dự án được xây dựng nhằm áp dụng các kiến thức về phát triển ứng dụng Android hiện đại, quản lý dữ liệu cục bộ, điều hướng giao diện, dịch vụ nền và tích hợp các nền tảng điện toán đám mây.
+| Yêu cầu                     | Chức năng trong app                                                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Layouts, Views**          | Màn hình Feed, Đăng bài, Bạn bè, Profile xây dựng bằng Jetpack Compose (`Scaffold`, `LazyColumn`, `Card`, `Row`, `Column`) |
+| **Dialog / Toast**          | AlertDialog xác nhận xoá bài viết, Toast thông báo đăng bài thành công/thất bại                                            |
+| **Menu**                    | Bottom Navigation gồm Feed - Đăng bài - Bạn bè - Profile                                                                   |
+| **Intent**                  | Mở Camera chụp ảnh, mở Gallery chọn ảnh, mở màn hình chi tiết bài viết                                                     |
+| **Service**                 | WorkManager đồng bộ danh sách bạn bè và làm mới dữ liệu nền                                                                |
+| **Navigation**              | Navigation Compose quản lý điều hướng giữa các màn hình                                                                    |
+| **Content Provider**        | Truy cập thư viện ảnh và danh bạ điện thoại (`ContactsContract`)                                                           |
+| **Room Database**           | Lưu bản nháp bài viết và thông tin người dùng cục bộ                                                                       |
+| **Web API** *(cộng điểm)*   | iTunes Search API tìm kiếm bài hát                                                                                         |
+| **Animation** *(cộng điểm)* | AnimatedVisibility, Crossfade, hiệu ứng Like                                                                               |
+| **Firebase** *(cộng điểm)*  | Firebase Authentication (Phone Auth), Firestore                                                                            |
 
 ---
 
 ## Chức năng chính
 
-### Quản lý tài khoản
+### 1. Đăng nhập bằng số điện thoại
 
-* Đăng ký tài khoản bằng SĐT/Password
-* Đăng nhập hệ thống
-* Đăng xuất
-* Chỉnh sửa hồ sơ cá nhân
-* Cập nhật ảnh đại diện
-
-### Chia sẻ khoảnh khắc
-
-* Chụp ảnh bằng camera
-* Chọn ảnh từ thư viện thiết bị
-* Đăng ảnh kèm mô tả ngắn hoặc kèm nhạc
-* Lưu trữ ảnh trên cloud storage
-* Xóa bài đăng của bản thân
-
-### Bảng tin bạn bè
-
-* Hiển thị ảnh mới nhất từ bạn bè
-* Tải dữ liệu theo thời gian thực
-* Làm mới dữ liệu bằng thao tác kéo xuống
-* Xem thông tin người đăng và thời gian đăng
-* Hiển thị list bạn bè gợi ý thông qua số số điện thoại trên máy người dùng (nếu sđt đó đã đăng kí app)
-
-### Tương tác bài đăng
-
-* Thả cảm xúc (❤️ 😂 😮 😢 👍)
-* Xem số lượng phản hồi của bài đăng
-* Nhận thông báo khi có người tương tác
-
-### Tin nhắn cá nhân
-
-* Chat 1-1 giữa bạn bè
-* Gửi tin nhắn văn bản
-* Chia sẻ (Reply) bài đăng trực tiếp vào cuộc trò chuyện
-
-### Quản lý bạn bè
-
-* Tìm kiếm người dùng
-* Gửi lời mời kết bạn
-* Chấp nhận hoặc từ chối lời mời
-* Xem danh sách bạn bè
-
-### Đồng bộ dữ liệu
-
-* Cache dữ liệu bằng Room Database
-* Hỗ trợ xem dữ liệu đã tải khi mất kết nối mạng
-* Đồng bộ dữ liệu khi có kết nối mạng trở lại
+* Nhập số điện thoại.
+* Nhập OTP xác thực.
+* Firebase Authentication xử lý đăng nhập.
+* Tự động duy trì phiên đăng nhập.
 
 ---
 
-## Các yêu cầu môn học được áp dụng
+### 2. Đăng bài
 
-| Nội dung         | Áp dụng trong dự án                                   |
-|------------------|-------------------------------------------------------|
-| Layouts, Views   | Jetpack Compose UI                                    |
-| Dialog/Toast     | Xóa bài đăng, xác nhận thao tác, thông báo trạng thái |
-| Menu             | Bottom Navigation, Dropdown Menu                      |
-| Intent           | Camera, Gallery, Chia sẻ nội dung                     |
-| Service          | Upload ảnh nền và đồng bộ dữ liệu                     |
-| Navigation       | Navigation Compose                                    |
-| Content Provider | Đọc danh bạ để tìm bạn bè                             |
-| Room Database    | Cache dữ liệu người dùng, bài đăng và tin nhắn        |
+* Chụp ảnh bằng CameraX.
+* Hoặc chọn ảnh từ thư viện.
+* Nhập caption.
+* Tìm kiếm bài hát bằng iTunes Search API.
+* Đính kèm bài hát vào bài viết.
+* Upload ảnh lên Supabase Storage.
+* Lưu thông tin bài viết vào Firestore.
+
+---
+
+### 3. Feed bài viết
+
+* Xem bài viết từ bạn bè.
+* Hiển thị:
+
+  * Ảnh bài viết
+  * Caption
+  * Tên bài hát
+  * Nghệ sĩ
+  * Thời gian đăng
+* Like bài viết.
+* Hỗ trợ xem offline với Firestore Cache và Coil Disk Cache.
+
+---
+
+### 4. Gợi ý bạn bè
+
+* Đọc danh bạ điện thoại từ thiết bị.
+* Lấy danh sách số điện thoại.
+* So khớp với người dùng đã đăng ký trên hệ thống.
+* Hiển thị danh sách "Có thể bạn biết".
+
+---
+
+### 5. Hồ sơ cá nhân
+
+* Xem thông tin cá nhân.
+* Xem danh sách bài viết đã đăng.
+* Chỉnh sửa tên hiển thị.
+* Xoá bài viết.
+
+---
+
+### 6. Bản nháp
+
+* Tự động lưu khi đang soạn bài.
+* Room lưu:
+
+  * Caption
+  * URI ảnh
+  * Thông tin bài hát
+* Khôi phục khi người dùng mở lại màn hình đăng bài.
+
+---
+
+### 7. Hỗ trợ ngoại tuyến (Offline)
+
+* Firestore Offline Persistence lưu cache dữ liệu bài viết.
+* Coil Disk Cache lưu cache ảnh đã xem.
+* Room lưu dữ liệu cục bộ:
+
+  * Thông tin người dùng.
+  * Bản nháp bài viết.
+* Người dùng vẫn có thể xem các bài viết và ảnh đã tải trước đó khi mất kết nối mạng.
 
 ---
 
 ## Công nghệ sử dụng
 
-### Android
+| Thành phần           | Công nghệ                     |
+| -------------------- | ----------------------------- |
+| UI                   | Jetpack Compose               |
+| Navigation           | Navigation Compose            |
+| State Management     | ViewModel + StateFlow         |
+| Local Database       | Room                          |
+| Authentication       | Firebase Phone Authentication |
+| Cloud Database       | Firebase Firestore            |
+| Storage              | Supabase Storage              |
+| Music Search         | iTunes Search API             |
+| Image Loading        | Coil Compose                  |
+| Background Task      | WorkManager                   |
+| Dependency Injection | Hilt *(nếu kịp)*              |
+| Architecture         | MVVM                          |
 
-* Kotlin
-* Jetpack Compose
-* Material Design 3
-* Navigation Compose
-* ViewModel
-* StateFlow
+---
 
-### Local Storage
+## Cấu trúc dữ liệu
 
-* Room Database
-* DataStore Preferences
+### User
 
-### Backend Services
+```text
+uid
+phoneNumber
+displayName
+avatarUrl
+createdAt
+```
 
-#### Firebase
+### Post
 
-* Firebase Authentication
-* Cloud Firestore
-* Firebase Cloud Messaging (FCM)
+```text
+postId
+userId
+caption
+imageUrl
+songName
+artistName
+previewUrl
+createdAt
+likeCount
+```
 
-#### Supabase
+### DraftPost (Room)
 
-* Supabase Storage
+```text
+id
+imageUri
+caption
+songName
+artistName
+updatedAt
+```
 
-### Networking
+### UserProfile (Room)
 
-* Retrofit / Ktor Client
-* Kotlin Coroutines
-* Kotlin Flow
+```text
+uid
+phoneNumber
+displayName
+avatarUrl
+```
+
+---
+
+## Cấu trúc màn hình
+
+```text
+LoginScreen
+
+MainScreen
+ ├── FeedScreen
+ ├── CreatePostScreen
+ ├── FriendsScreen
+ └── ProfileScreen
+
+PostDetailScreen
+```
 
 ---
 
 ## Kiến trúc hệ thống
 
-Dự án được xây dựng theo mô hình MVVM (Model - View - ViewModel).
-
 ```text
-Presentation Layer
+Firebase Phone Auth
         │
         ▼
-ViewModel Layer
+     Firestore
+        │
+        ├── Users
+        ├── Posts
+        └── Friends
+
+Supabase Storage
+        │
+        └── Images
+
+Room
+        │
+        ├── UserProfile
+        └── DraftPost
+
+iTunes API
+        │
+        └── Song Search
+
+Jetpack Compose
         │
         ▼
-Repository Layer
-   ┌─────────────┬─────────────┬─────────────┐
-   ▼             ▼             ▼
-Firestore    Supabase      Room DB
-(Auth/Data)  (Storage)     (Cache)
+       UI
 ```
-Csdl của dự án sửa dụng json tree của realtime database với cấu trúc cơ bản như sau
-
-```json
-{
-  "users": {
-    "<phone_number>": {
-      "displayName": "Bùi Thế Sơn",
-      "avatarUrl": "https://firebasestorage...", 
-      "fcmToken": "<token_de_gui_push_notification>" 
-    }
-  },
-
-  "friendships": {
-    "<my_phone_number>": {
-      "<friend_phone_number>": {
-        "status": "ACCEPTED",
-        "senderPhone": "<my_phone_number>", 
-        "timestamp": 1717650000
-      }
-    }
-  },
-
-  "photos": {
-    "<photo_id>": {
-      "senderPhone": "<phone_number>",
-      "imageUrl": "https://firebasestorage...",
-      "musicUrl": "https://firebasestorage...", 
-      "description": "Cà phê sáng",
-      "timestamp": 1717650000,
-      "reactionCount": 5 
-    }
-  },
-
-  "photo_reactions": {
-    "<photo_id>": {
-      "<friend_phone_number_1>": "❤️",
-      "<friend_phone_number_2>": "😂"
-    }
-  },
-
-  "user_feeds": {
-    "<phone_number>": {
-      "<photo_id>": 1717650000
-    }
-  },
-
-  "chats": {
-    "<chat_room_id>": {
-      "<message_id>": {
-        "senderPhone": "<phone_number>",
-        "message": "Trời hôm nay đẹp quá!",
-        "type": "text", 
-        "replyPhotoId": "<photo_id>", 
-        "timestamp": 1717650020
-      }
-    }
-  }
-}
-```
-
-Rằng buộc cho các thao tác với json tree
-```json
-{
-  "rules": {
-    "photos": {
-      ".read": "auth != null",
-      "$photo_id": {
-        // Cho phép tạo mới.
-        // Nếu sửa/xóa (dữ liệu đã tồn tại), senderPhone phải trùng với SĐT đang đăng nhập.
-        ".write": "auth != null && (!data.exists() || data.child('senderPhone').val() === auth.uid)"
-      }
-    },
-
-    "chats": {
-      "$chat_room_id": {
-        // Chỉ người có SĐT nằm trong ID phòng chat mới được đọc tin nhắn
-        ".read": "auth != null && $chat_room_id.contains(auth.uid)",
-        
-        "$message_id": {
-          // Tạo mới: senderPhone phải là SĐT đang đăng nhập
-          // Sửa/Xóa: senderPhone cũ đã lưu phải là SĐT đang đăng nhập
-          ".write": "auth != null && (
-            (!data.exists() && newData.child('senderPhone').val() === auth.uid) 
-            || 
-            (data.exists() && data.child('senderPhone').val() === auth.uid)
-          )"
-        }
-      }
-    }
-  }
-}
-```
----
-
-## Luồng đăng ảnh
-
-```text
-Người dùng chụp ảnh
-        │
-        ▼
-Upload ảnh lên Supabase Storage
-        │
-        ▼
-Nhận URL ảnh
-        │
-        ▼
-Lưu metadata vào Firestore
-        │
-        ▼
-Đồng bộ lên Feed bạn bè
-```
-
----
-
-## Luồng reply bài đăng vào tin nhắn
-
-```text
-Người dùng chọn bài đăng
-        │
-        ▼
-Nhấn "gửi tin nhắn ..."
-        │
-        ▼
-Nhập tin nhắn muốn rep bài đăng
-        │
-        ▼
-bài đăng kèm tin nhắn được gửi trực tiếp vào hộp thoai
-```
-
----
-
-## Hướng phát triển
-
-* Android Home Screen Widget
-* Chat nhóm
-* Story 24 giờ
-* Chia sẻ video ngắn
-* Realtime Presence (Online/Offline)
-* AI phân loại ảnh tự động
-
----
-
-## Thành viên nhóm
-
-* Thành viên 1: Bùi Thế Sơn
-* Thành viên 2: Nguyễn Trần Thiên Bảo
-* Thành viên 3: Phan Nguyễn Gia Huy
