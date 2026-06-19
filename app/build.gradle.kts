@@ -134,4 +134,13 @@ dependencies {
     implementation(libs.supabase.storage)
     implementation(libs.supabase.postgrest)
 
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
+    implementation("com.google.code.gson:gson:2.13.1")
+
+    implementation("androidx.work:work-runtime-ktx:2.10.3")
+
+
 }
