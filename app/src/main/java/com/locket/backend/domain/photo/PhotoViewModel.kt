@@ -144,25 +144,6 @@ class PhotoViewModel(
     }
 
     /**
-     * Chuyển Uri ảnh từ thư viện hệ thống sang file tạm thời trong cache.
-     * Dùng cho luồng: chọn từ Gallery → PendingPhotoConfirmationScreen.
-     */
-    fun saveUriToTempFile(context: Context, uri: Uri, onResult: (File?) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val tempFile = File(context.cacheDir, "gallery_${UUID.randomUUID()}.jpg")
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    tempFile.outputStream().use { output -> inputStream.copyTo(output) }
-                }
-                withContext(Dispatchers.Main) { onResult(tempFile) }
-            } catch (e: Exception) {
-                Log.e("PhotoViewModel", "Failed to copy gallery uri to temp file", e)
-                withContext(Dispatchers.Main) { onResult(null) }
-            }
-        }
-    }
-
-    /**
      * Luồng đăng bài hoàn chỉnh:
      * 1. Crop ảnh tạm thành 1:1
      * 2. Upload lên Supabase Storage → lấy imageUrl
