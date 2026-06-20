@@ -9,14 +9,12 @@ import kotlinx.coroutines.launch
 
 class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
 
-    // Sub-tab active trong màn hình Bạn bè: 0 = Bạn bè, 1 = Lời mời, 2 = Gợi ý
     private val _activeSubTab = MutableStateFlow(0)
     val activeSubTab: StateFlow<Int> = _activeSubTab
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    // Trạng thái hiển thị danh sách động tùy thuộc vào Sub-tab hoặc Search Query
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiFriendsList: StateFlow<List<FriendModel>> = combine(_activeSubTab, _searchQuery) { tab, query ->
         Pair(tab, query)
@@ -33,7 +31,6 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // Đổ dữ liệu mẫu ngay khi khởi tạo để test giao diện
         viewModelScope.launch {
             repository.prepopulateMockData()
         }
@@ -50,9 +47,13 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
     fun sendRequest(phone: String) = viewModelScope.launch { repository.sendFriendRequest(phone) }
     fun acceptRequest(phone: String) = viewModelScope.launch { repository.acceptFriendRequest(phone) }
     fun removeFriendship(phone: String) = viewModelScope.launch { repository.cancelOrDeleteFriendship(phone) }
+
+    fun syncContactsAndFindFriends(contactList: List<String>) {
+        // Chỗ này bạn của bạn sẽ viết code so khớp list số điện thoại 
+        // từ danh bạ với tài khoản Firestore để gợi ý kết bạn.
+    }
 }
 
-// Factory cho ViewModel
 class FriendsViewModelFactory(private val repository: FriendRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(FriendViewModel::class.java)) {

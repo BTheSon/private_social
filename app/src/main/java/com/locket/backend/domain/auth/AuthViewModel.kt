@@ -12,6 +12,7 @@ import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.database.FirebaseDatabase
+import com.locket.backend.service.FirebaseClientService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,8 +28,8 @@ sealed class AuthState {
 }
 
 class AuthViewModel(private val userRepository: UserRepository) : ViewModel() {
-    private val auth by lazy { FirebaseAuth.getInstance() }
-    private val database by lazy { FirebaseDatabase.getInstance().reference }
+    private val auth by lazy { FirebaseClientService.auth }
+    private val database by lazy { FirebaseClientService.database.reference }
 
     private var storedVerificationId: String? = null
     private var currentInputPhone: String = ""
