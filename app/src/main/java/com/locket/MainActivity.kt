@@ -28,7 +28,7 @@ import com.locket.frontend.screens.auth.AuthScreen
 import com.locket.frontend.screens.main.MainScreen
 import com.locket.frontend.theme.MyApplicationTheme
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
 
         val retrofit = Retrofit.Builder()
             .baseUrl("https://itunes.apple.com/")
-            .addConverterFactory(MoshiConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
             .build()
         val itunesApiService = retrofit.create(com.locket.backend.domain.music.ItunesApiService::class.java)
         val itunesRepository = ItunesRepository(itunesApiService)
