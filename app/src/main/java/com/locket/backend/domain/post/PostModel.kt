@@ -7,6 +7,7 @@ data class PostModel(
     val caption: String = "",
     val songName: String? = null,
     val artistName: String? = null,
+    val previewUrl: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val likedBy: List<String> = emptyList()
 )

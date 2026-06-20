@@ -18,16 +18,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import com.locket.backend.domain.photo.PhotoEntity
+import com.locket.backend.domain.post.PostModel
 
 @Composable
 fun TimelineHistoryPage(
-    photos: List<PhotoEntity>,
-    onBackClick: () -> Unit,
-    onPhotoClick: (PhotoEntity) -> Unit,
-    onPhotoLongClick: (PhotoEntity) -> Unit
+    posts: List<PostModel>,
+    onBackClick: () -> Unit
 ) {
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { photos.size })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { posts.size })
 
     Column(
         modifier = Modifier
@@ -50,25 +48,53 @@ fun TimelineHistoryPage(
                     .background(Color(0x1AFFCC00), CircleShape)
                     .border(1.dp, Color(0xFFFFCC00).copy(alpha = 0.3f), CircleShape)
             ) {
-                Icon(Icons.Default.PhotoCamera, "Quay về máy ảnh", tint = Color(0xFFFFCC00), modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.PhotoCamera,
+                    "Quay về máy ảnh",
+                    tint = Color(0xFFFFCC00),
+                    modifier = Modifier.size(18.dp)
+                )
             }
-//            Row(verticalAlignment = Alignment.CenterVertically) {
-//            }
+
+            Text(
+                text = "${posts.size} khoảnh khắc",
+                color = Color.Gray,
+                style = MaterialTheme.typography.labelMedium
+            )
         }
 
         HorizontalDivider(color = Color(0xFF222222), thickness = 1.dp)
 
         // Content
-        if (photos.isEmpty()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                    Icon(Icons.Default.PhotoAlbum, "Album trống", tint = Color(0xFF222222), modifier = Modifier.size(92.dp))
+        if (posts.isEmpty()) {
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.PhotoAlbum,
+                        "Album trống",
+                        tint = Color(0xFF222222),
+                        modifier = Modifier.size(92.dp)
+                    )
                     Spacer(modifier = Modifier.height(24.dp))
-                    Text("Chưa có ảnh nào chụp", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Chưa có khoảnh khắc nào",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        "Hãy chạm vào biểu tượng Máy ảnh góc trái để mở camera chụp và gửi khoảnh khắc của bạn ngay nhé!",
-                        style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textAlign = TextAlign.Center, lineHeight = 22.sp
+                        "Hãy chụp ảnh và gửi đi khoảnh khắc đầu tiên của bạn!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 22.sp
                     )
                 }
             }
@@ -76,13 +102,10 @@ fun TimelineHistoryPage(
             VerticalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                key = { page -> photos[page].id }
+                key = { page -> posts[page].id.ifEmpty { page.toString() } }
             ) { page ->
-                val photo = photos[page]
                 TimelinePhotoItem(
-                    photo = photo,
-                    onClick = { onPhotoClick(photo) },
-                    onLongClick = { onPhotoLongClick(photo) },
+                    post = posts[page],
                     modifier = Modifier.fillMaxSize()
                 )
             }

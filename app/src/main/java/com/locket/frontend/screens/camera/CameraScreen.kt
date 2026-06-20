@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.locket.backend.domain.photo.PhotoViewModel
+import com.locket.backend.domain.post.PostViewModel
 import com.locket.frontend.screens.camera.page.CameraContent
 import com.locket.frontend.screens.camera.page.PermissionPrompt
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -34,7 +35,8 @@ import kotlin.coroutines.resumeWithException
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun CameraScreen(
-    viewModel: PhotoViewModel,
+    photoViewModel: PhotoViewModel,
+    postViewModel: PostViewModel,
     modifier: Modifier = Modifier
 ) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
@@ -42,10 +44,13 @@ fun CameraScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0F0F0F)) // Dark locket background
+            .background(Color(0xFF0F0F0F))
     ) {
         if (cameraPermissionState.status.isGranted) {
-            CameraContent(viewModel = viewModel)
+            CameraContent(
+                photoViewModel = photoViewModel,
+                postViewModel = postViewModel
+            )
         } else {
             PermissionPrompt(
                 onRequestPermission = { cameraPermissionState.launchPermissionRequest() }

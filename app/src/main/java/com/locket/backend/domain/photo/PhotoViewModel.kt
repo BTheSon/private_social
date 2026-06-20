@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
+import android.net.Uri
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -15,6 +16,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.locket.backend.domain.music.SongModel
+import com.locket.backend.domain.post.PostModel
+import com.locket.backend.domain.post.PostRepository
+import com.locket.backend.service.FirebaseClientService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,7 +33,8 @@ import java.util.UUID
 
 class PhotoViewModel(
     application: Application,
-    private val repository: PhotoRepository
+    private val repository: PhotoRepository,
+    private val postRepository: PostRepository
 ) : AndroidViewModel(application) {
 
     val allPhotos: StateFlow<List<PhotoEntity>> = repository.allPhotos
@@ -44,7 +50,7 @@ class PhotoViewModel(
     private val _currentLensFacing = MutableStateFlow(CameraSelector.LENS_FACING_BACK)
     val currentLensFacing = _currentLensFacing.asStateFlow()
 
-    private val _activeTab = MutableStateFlow(0) // 0 for Camera, 1 for Gallery
+    private val _activeTab = MutableStateFlow(0)
     val activeTab = _activeTab.asStateFlow()
 
     fun toggleLensFacing() {
@@ -76,38 +82,25 @@ class PhotoViewModel(
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
                             val photosDir = File(context.filesDir, "captured_photos")
-                            if (!photosDir.exists()) {
-                                photosDir.mkdirs()
-                            }
+                            if (!photosDir.exists()) photosDir.mkdirs()
                             val finalFile = File(photosDir, "IMG_${System.currentTimeMillis()}.jpg")
 
                             val processed = processAndSaveSquare(tempFile, finalFile)
-                            if (tempFile.exists()) {
-                                tempFile.delete() // clean up temp file
-                            }
+                            if (tempFile.exists()) tempFile.delete()
 
                             if (processed) {
-                                val photoEntity = PhotoEntity(filePath = finalFile.absolutePath)
-                                repository.insertPhoto(photoEntity)
+                                repository.insertPhoto(PhotoEntity(filePath = finalFile.absolutePath))
                                 _isCapturing.value = false
-                                withContext(Dispatchers.Main) {
-                                    onResult(true)
-                                }
+                                withContext(Dispatchers.Main) { onResult(true) }
                             } else {
                                 _isCapturing.value = false
-                                withContext(Dispatchers.Main) {
-                                    onResult(false)
-                                }
+                                withContext(Dispatchers.Main) { onResult(false) }
                             }
                         } catch (e: Exception) {
                             Log.e("PhotoViewModel", "Error inside save coroutine", e)
                             _isCapturing.value = false
-                            if (tempFile.exists()) {
-                                tempFile.delete()
-                            }
-                            withContext(Dispatchers.Main) {
-                                onResult(false)
-                            }
+                            if (tempFile.exists()) tempFile.delete()
+                            withContext(Dispatchers.Main) { onResult(false) }
                         }
                     }
                 }
@@ -115,9 +108,7 @@ class PhotoViewModel(
                 override fun onError(exception: ImageCaptureException) {
                     Log.e("PhotoViewModel", "Camera Capture Error", exception)
                     _isCapturing.value = false
-                    if (tempFile.exists()) {
-                        tempFile.delete()
-                    }
+                    if (tempFile.exists()) tempFile.delete()
                     onResult(false)
                 }
             }
@@ -145,52 +136,111 @@ class PhotoViewModel(
                 override fun onError(exception: ImageCaptureException) {
                     Log.e("PhotoViewModel", "Temporary Capture Error", exception)
                     _isCapturing.value = false
-                    if (tempFile.exists()) {
-                        tempFile.delete()
-                    }
+                    if (tempFile.exists()) tempFile.delete()
                     onResult(null)
                 }
             }
         )
     }
 
-    fun savePostFromTemp(context: Context, tempFile: File, onResult: (Boolean) -> Unit) {
+    /**
+     * Chuyển Uri ảnh từ thư viện hệ thống sang file tạm thời trong cache.
+     * Dùng cho luồng: chọn từ Gallery → PendingPhotoConfirmationScreen.
+     */
+    fun saveUriToTempFile(context: Context, uri: Uri, onResult: (File?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val tempFile = File(context.cacheDir, "gallery_${UUID.randomUUID()}.jpg")
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    tempFile.outputStream().use { output -> inputStream.copyTo(output) }
+                }
+                withContext(Dispatchers.Main) { onResult(tempFile) }
+            } catch (e: Exception) {
+                Log.e("PhotoViewModel", "Failed to copy gallery uri to temp file", e)
+                withContext(Dispatchers.Main) { onResult(null) }
+            }
+        }
+    }
+
+    /**
+     * Luồng đăng bài hoàn chỉnh:
+     * 1. Crop ảnh tạm thành 1:1
+     * 2. Upload lên Supabase Storage → lấy imageUrl
+     * 3. Lưu PostModel lên Firebase Realtime Database
+     * 4. Lưu ảnh vào Room DB local
+     *
+     * [isCapturing] được set true trong suốt quá trình để hiển thị loading overlay.
+     */
+    fun processAndPost(
+        context: Context,
+        tempFile: File,
+        caption: String,
+        song: SongModel?,
+        onResult: (Boolean) -> Unit
+    ) {
         _isCapturing.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // 1. Crop 1:1
                 val photosDir = File(context.filesDir, "captured_photos")
-                if (!photosDir.exists()) {
-                    photosDir.mkdirs()
-                }
-                val finalFile = File(photosDir, "IMG_${System.currentTimeMillis()}.jpg")
+                if (!photosDir.exists()) photosDir.mkdirs()
+                val processedFile = File(photosDir, "IMG_${System.currentTimeMillis()}.jpg")
+                val processed = processAndSaveSquare(tempFile, processedFile)
 
-                val processed = processAndSaveSquare(tempFile, finalFile)
-                if (tempFile.exists()) {
-                    tempFile.delete() // clean up temp file
+                if (tempFile.exists()) tempFile.delete()
+
+                if (!processed) {
+                    Log.e("PhotoViewModel", "processAndPost: processAndSaveSquare FAILED")
+                    _isCapturing.value = false
+                    withContext(Dispatchers.Main) { onResult(false) }
+                    return@launch
+                }
+                Log.d("PhotoViewModel", "processAndPost: image processed OK → ${processedFile.absolutePath} (${processedFile.length()} bytes)")
+
+                // 2. Upload Supabase Storage
+                val bytes = processedFile.readBytes()
+                Log.d("PhotoViewModel", "processAndPost: uploading ${bytes.size} bytes to Supabase...")
+                val imageUrl = postRepository.uploadImageToSupabase(bytes)
+
+                if (imageUrl.isNullOrEmpty()) {
+                    Log.e("PhotoViewModel", "processAndPost: Supabase upload FAILED — imageUrl is null/empty")
+                    // Vẫn lưu local dù cloud thất bại
+                    repository.insertPhoto(PhotoEntity(filePath = processedFile.absolutePath))
+                    _isCapturing.value = false
+                    withContext(Dispatchers.Main) { onResult(false) }
+                    return@launch
+                }
+                Log.d("PhotoViewModel", "processAndPost: Supabase upload OK → $imageUrl")
+
+                // 3. Lưu Firebase RTDB
+                val currentUserId = FirebaseClientService.auth.currentUser?.phoneNumber
+                    ?: FirebaseClientService.auth.currentUser?.uid
+                    ?: "unknown"
+
+                val post = PostModel(
+                    userId = currentUserId,
+                    imageUrl = imageUrl,
+                    caption = caption,
+                    songName = song?.trackName,
+                    artistName = song?.artistName,
+                    previewUrl = song?.previewUrl
+                )
+                Log.d("PhotoViewModel", "processAndPost: saving post to Firebase RTDB as userId=$currentUserId...")
+                val saved = postRepository.savePost(post)
+
+                if (!saved) {
+                    Log.e("PhotoViewModel", "processAndPost: Firebase RTDB savePost FAILED")
                 }
 
-                if (processed) {
-                    val photoEntity = PhotoEntity(filePath = finalFile.absolutePath)
-                    repository.insertPhoto(photoEntity)
-                    _isCapturing.value = false
-                    withContext(Dispatchers.Main) {
-                        onResult(true)
-                    }
-                } else {
-                    _isCapturing.value = false
-                    withContext(Dispatchers.Main) {
-                        onResult(false)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("PhotoViewModel", "Error inside save coroutine from temp", e)
+                // 4. Lưu Room local
+                repository.insertPhoto(PhotoEntity(filePath = processedFile.absolutePath))
+
                 _isCapturing.value = false
-                if (tempFile.exists()) {
-                    tempFile.delete()
-                }
-                withContext(Dispatchers.Main) {
-                    onResult(false)
-                }
+                withContext(Dispatchers.Main) { onResult(saved) }
+            } catch (e: Exception) {
+                Log.e("PhotoViewModel", "processAndPost: EXCEPTION — ${e.javaClass.simpleName}: ${e.message}", e)
+                _isCapturing.value = false
+                withContext(Dispatchers.Main) { onResult(false) }
             }
         }
     }
@@ -205,7 +255,6 @@ class PhotoViewModel(
         try {
             val bitmap = BitmapFactory.decodeFile(sourceFile.absolutePath) ?: return false
 
-            // EXIF rotation detection and correction
             var rotationDegrees = 0
             try {
                 val exif = ExifInterface(sourceFile.absolutePath)
@@ -230,20 +279,15 @@ class PhotoViewModel(
             val y = (height - size) / 2
 
             val matrix = Matrix()
-            if (rotationDegrees != 0) {
-                matrix.postRotate(rotationDegrees.toFloat())
-            }
+            if (rotationDegrees != 0) matrix.postRotate(rotationDegrees.toFloat())
 
-            // Generate square cropped & rotated bitmap
             val squareBitmap = Bitmap.createBitmap(bitmap, x, y, size, size, matrix, true)
 
             outputFile.outputStream().use { out ->
                 squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
             }
 
-            if (squareBitmap != bitmap) {
-                squareBitmap.recycle()
-            }
+            if (squareBitmap != bitmap) squareBitmap.recycle()
             bitmap.recycle()
             return true
         } catch (e: Exception) {
@@ -255,12 +299,13 @@ class PhotoViewModel(
 
 class PhotoViewModelFactory(
     private val application: Application,
-    private val repository: PhotoRepository
+    private val repository: PhotoRepository,
+    private val postRepository: PostRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PhotoViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return PhotoViewModel(application, repository) as T
+            return PhotoViewModel(application, repository, postRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

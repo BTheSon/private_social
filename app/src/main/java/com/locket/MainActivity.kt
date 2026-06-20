@@ -11,15 +11,24 @@ import androidx.navigation.compose.rememberNavController
 import com.locket.backend.domain.auth.AuthViewModel
 import com.locket.backend.domain.auth.AuthViewModelFactory
 import com.locket.backend.domain.database.MDatabase
+import com.locket.backend.domain.friend.FriendRepository
+import com.locket.backend.domain.friend.FriendViewModel
+import com.locket.backend.domain.friend.FriendsViewModelFactory
+import com.locket.backend.domain.music.ItunesRepository
 import com.locket.backend.domain.photo.PhotoRepository
 import com.locket.backend.domain.photo.PhotoViewModel
 import com.locket.backend.domain.photo.PhotoViewModelFactory
+import com.locket.backend.domain.post.PostRepository
+import com.locket.backend.domain.post.PostViewModel
+import com.locket.backend.domain.post.PostViewModelFactory
 import com.locket.backend.domain.profile.ProfileViewModel
 import com.locket.backend.domain.profile.ProfileViewModelFactory
 import com.locket.backend.domain.user.UserRepository
 import com.locket.frontend.screens.auth.AuthScreen
 import com.locket.frontend.screens.main.MainScreen
 import com.locket.frontend.theme.MyApplicationTheme
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -29,54 +38,47 @@ class MainActivity : ComponentActivity() {
 
         val mDatabase = MDatabase.getDatabase(this)
 
-        // Photo
+        // Post & Music (khởi tạo trước vì PhotoViewModel cần PostRepository)
+        val postRepository = PostRepository()
 
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://itunes.apple.com/")
+            .addConverterFactory(MoshiConverterFactory.create())
+            .build()
+        val itunesApiService = retrofit.create(com.locket.backend.domain.music.ItunesApiService::class.java)
+        val itunesRepository = ItunesRepository(itunesApiService)
+
+        // Photo (inject PostRepository để thực hiện upload sau khi chụp)
         val photoDao = mDatabase.photoDao()
         val photoRepository = PhotoRepository(photoDao)
         val photoViewModel: PhotoViewModel by viewModels {
-            PhotoViewModelFactory(application, photoRepository)
+            PhotoViewModelFactory(application, photoRepository, postRepository)
+        }
+
+        // Post (music search + timeline posts)
+        val postViewModel: PostViewModel by viewModels {
+            PostViewModelFactory(postRepository, itunesRepository)
         }
 
         // Friend
-
-        val friendRepository = com.locket.backend.domain.friend.FriendRepository() // Không cần truyền Dao nữa
-        val friendViewModel: com.locket.backend.domain.friend.FriendViewModel by viewModels {
-            com.locket.backend.domain.friend.FriendViewModelFactory(friendRepository)
+        val friendRepository = FriendRepository()
+        val friendViewModel: FriendViewModel by viewModels {
+            FriendsViewModelFactory(friendRepository)
         }
 
         // User
-
         val userDao = mDatabase.userDao()
         val userRepository = UserRepository(userDao)
 
         // Auth
-
         val authViewModel: AuthViewModel by viewModels {
             AuthViewModelFactory(userRepository)
         }
 
         // Profile
-
         val profileViewModel: ProfileViewModel by viewModels {
             ProfileViewModelFactory(userRepository)
         }
-
-        // Post & Feed
-
-        val postRepository = com.locket.backend.domain.post.PostRepository()
-        
-        val retrofit = retrofit2.Retrofit.Builder()
-            .baseUrl("https://itunes.apple.com/")
-            .addConverterFactory(retrofit2.converter.moshi.MoshiConverterFactory.create())
-            .build()
-        val itunesApiService = retrofit.create(com.locket.backend.domain.music.ItunesApiService::class.java)
-        val itunesRepository = com.locket.backend.domain.music.ItunesRepository(itunesApiService)
-
-        val postViewModel: com.locket.backend.domain.post.PostViewModel by viewModels {
-            com.locket.backend.domain.post.PostViewModelFactory(postRepository, itunesRepository)
-        }
-
-        val sharedPostViewModel: com.locket.backend.domain.post.SharedPostViewModel by viewModels()
 
         setContent {
             MyApplicationTheme(darkTheme = true) {
@@ -90,9 +92,7 @@ class MainActivity : ComponentActivity() {
                             viewModel = authViewModel,
                             onAuthSuccess = {
                                 navController.navigate("main") {
-                                    popUpTo("auth") {
-                                        inclusive = true
-                                    }
+                                    popUpTo("auth") { inclusive = true }
                                 }
                             }
                         )
@@ -100,12 +100,10 @@ class MainActivity : ComponentActivity() {
                     composable("main") {
                         MainScreen(
                             photoViewModel = photoViewModel,
+                            postViewModel = postViewModel,
                             friendViewModel = friendViewModel,
                             profileViewModel = profileViewModel,
-                            postViewModel = postViewModel,
-                            sharedPostViewModel = sharedPostViewModel,
                             onNavigateToAuth = {
-                                // Khi đăng xuất, xóa toàn bộ lịch sử (stack) và quay về màn hình auth
                                 navController.navigate("auth") {
                                     popUpTo(0) { inclusive = true }
                                 }

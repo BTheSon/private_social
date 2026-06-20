@@ -11,8 +11,8 @@ object SupabaseClientService {
     val client: SupabaseClient by lazy {
         createSupabaseClient(
             // TODO: Bổ sung URL và Key thật vào BuildConfig hoặc .env file
-            supabaseUrl = "YOUR_SUPABASE_URL",
-            supabaseKey = "YOUR_SUPABASE_ANON_KEY"
+            supabaseUrl = "https://ggkvmrgoezkvprzaicjt.supabase.co",
+            supabaseKey = "sb_publishable_IIrPdzcYr7s0nPBiXduzRw_53Tmi4Fk"
         ) {
             install(Auth)
             install(Storage)
