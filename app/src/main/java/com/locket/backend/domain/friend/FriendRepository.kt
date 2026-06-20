@@ -1,60 +1,143 @@
 package com.locket.backend.domain.friend
 
-import com.locket.backend.domain.user.UserEntity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-class FriendRepository(private val friendDao: FriendDao) {
+class FriendRepository {
+    private val database = FirebaseDatabase.getInstance().reference
+    private val auth = FirebaseAuth.getInstance()
 
-    val friends: Flow<List<FriendModel>> = friendDao.getFriendsList()
-    val receivedInvites: Flow<List<FriendModel>> = friendDao.getReceivedInvites()
-    val sentInvites: Flow<List<FriendModel>> = friendDao.getSentInvites()
-    val suggestions: Flow<List<FriendModel>> = friendDao.getSuggestions()
+    // Lấy số điện thoại của chính mình từ Firebase Auth
+    private val myPhone: String
+        get() = auth.currentUser?.phoneNumber ?: ""
 
-    fun searchUsers(query: String): Flow<List<FriendModel>> = friendDao.searchUsers(query)
+    // LẮNG NGHE BIẾN ĐỘNG BẠN BÈ THỜI GIAN THỰC TỪ FIREBASE
+    fun observeFriendships(): Flow<List<FriendModel>> = callbackFlow {
+        if (myPhone.isEmpty()) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
 
-    suspend fun sendFriendRequest(receiverPhone: String) {
-        val myPhone = friendDao.getMyPhoneNumber() ?: return
-        friendDao.insertFriendship(FriendshipEntity(senderPhone = myPhone, receiverPhone = receiverPhone, status = "PENDING"))
+        val friendshipRef = database.child("friendships").child(myPhone)
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = mutableListOf<FriendModel>()
+                viewModelScopeLaunch {
+                    for (friendSnapshot in snapshot.children) {
+                        val friendPhone = friendSnapshot.key ?: continue
+                        val status = friendSnapshot.child("status").getValue(String::class.java) ?: "NONE"
+                        val senderPhone = friendSnapshot.child("senderPhone").getValue(String::class.java) ?: ""
+
+                        // Phân định chính xác trạng thái hiển thị cho UI dựa vào cấu trúc JSON của bạn
+                        val relationStatus = when (status) {
+                            "ACCEPTED" -> "FRIEND"
+                            "PENDING" -> {
+                                if (senderPhone == myPhone) "SENT" else "RECEIVED"
+                            }
+                            else -> "NONE"
+                        }
+
+                        // Lấy thêm displayName từ bảng users của đối phương để hiển thị
+                        val userSnapshot = database.child("users").child(friendPhone).get().await()
+                        val displayName = userSnapshot.child("displayName").getValue(String::class.java) ?: "User $friendPhone"
+
+                        list.add(FriendModel(friendPhone, displayName, relationStatus))
+                    }
+                    trySend(list)
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+
+        friendshipRef.addValueEventListener(listener)
+        // Hủy lắng nghe khi không còn dùng Flow này nữa để tránh rò rỉ bộ nhớ (Memory Leak)
+        awaitClose { friendshipRef.removeEventListener(listener) }
     }
 
-    suspend fun acceptFriendRequest(senderPhone: String) {
-        val myPhone = friendDao.getMyPhoneNumber() ?: return
-        friendDao.insertFriendship(FriendshipEntity(senderPhone = senderPhone, receiverPhone = myPhone, status = "ACCEPTED"))
-    }
+    // 1. GỬI LỜI MỜI KẾT BẠN (Ghi song song vào cả 2 tài khoản)
+    suspend fun sendFriendRequest(friendPhone: String) {
+        if (myPhone.isEmpty() || myPhone == friendPhone) return
+        val timestamp = System.currentTimeMillis() / 1000
 
-    suspend fun cancelOrDeleteFriendship(targetPhone: String) {
-        val myPhone = friendDao.getMyPhoneNumber() ?: return
-        friendDao.deleteFriendship(myPhone, targetPhone)
-    }
-
-    // Hàm tạo Dữ liệu mẫu cực xịn để test chức năng ngay lập tức
-    suspend fun prepopulateMockData() {
-        // Tạo tài khoản của tôi trước
-        friendDao.insertUser(UserEntity("0901234567", "Sơn Tùng M-TP", isMe = true))
-
-        // Mock danh sách người dùng trong hệ thống
-        val mockUsers = listOf(
-            UserEntity("0988888888", "Bảo Đẹp Trai"),
-            UserEntity("0911111111", "Anh Khang Kotlin"),
-            UserEntity("0922222222", "Hải Phòng Dev"),
-            UserEntity("0933333333", "Hà My Blazor"),
-            UserEntity("0944444444", "Linh Chi Supabase"),
-            UserEntity("0955555555", "JustaTee"),
-            UserEntity("0966666666", "Soobin Hoàng Sơn"),
-            UserEntity("0977777777", "Binz Da Poet")
+        val requestMap = mapOf(
+            "status" to "PENDING",
+            "senderPhone" to myPhone,
+            "timestamp" to timestamp
         )
-        mockUsers.forEach { friendDao.insertUser(it) }
 
-        // Mối quan hệ mẫu
-        // 1. Đã kết bạn
-        friendDao.insertFriendship(FriendshipEntity("0901234567", "0988888888", "ACCEPTED"))
-        friendDao.insertFriendship(FriendshipEntity("0911111111", "0901234567", "ACCEPTED"))
-
-        // 2. Lời mời kết bạn ĐÃ NHẬN (Người khác gửi cho mình)
-        friendDao.insertFriendship(FriendshipEntity("0922222222", "0901234567", "PENDING"))
-        friendDao.insertFriendship(FriendshipEntity("0933333333", "0901234567", "PENDING"))
-
-        // 3. Lời mời kết bạn ĐÃ GỬI (Mình đi gửi cho người khác)
-        friendDao.insertFriendship(FriendshipEntity("0901234567", "0944444444", "PENDING"))
+        val updates = hashMapOf<String, Any>(
+            "/friendships/$myPhone/$friendPhone" to requestMap,
+            "/friendships/$friendPhone/$myPhone" to requestMap
+        )
+        database.updateChildren(updates).await()
     }
+
+    // 2. CHẤP NHẬN LỜI MỜI KẾT BẠN (Đổi trạng thái thành ACCEPTED ở cả 2 đầu)
+    suspend fun acceptFriendRequest(friendPhone: String) {
+        if (myPhone.isEmpty()) return
+
+        val updates = hashMapOf<String, Any>(
+            "/friendships/$myPhone/$friendPhone/status" to "ACCEPTED",
+            "/friendships/$friendPhone/$myPhone/status" to "ACCEPTED"
+        )
+        database.updateChildren(updates).await()
+    }
+
+    // 3. HỦY BẠN / HỦY LỜI MỜI ĐÃ GỬI / TỪ CHỐI LỜI MỜI ĐÃ NHẬN
+    suspend fun removeFriendship(friendPhone: String) {
+        if (myPhone.isEmpty()) return
+
+        val updates = hashMapOf<String, Any?>(
+            "/friendships/$myPhone/$friendPhone" to null,
+            "/friendships/$friendPhone/$myPhone" to null
+        )
+        database.updateChildren(updates).await()
+    }
+
+    // Tìm kiếm một user bất kỳ trên Firebase theo SĐT (Dùng cho Dialog)
+    suspend fun findUserOnFirebase(phone: String): FriendModel? {
+        val formattedPhone = if (phone.startsWith("0")) "+84${phone.substring(1)}" else phone
+        if (formattedPhone == myPhone) return null // Không tự tìm chính mình
+
+        return try {
+            val userSnapshot = database.child("users").child(formattedPhone).get().await()
+            if (userSnapshot.exists()) {
+                val displayName = userSnapshot.child("displayName").getValue(String::class.java) ?: "Locket User"
+
+                // Kiểm tra xem hiện tại đã có mối quan hệ nào chưa
+                val friendshipSnapshot = database.child("friendships").child(myPhone).child(formattedPhone).get().await()
+                val relationStatus = if (friendshipSnapshot.exists()) {
+                    val status = friendshipSnapshot.child("status").getValue(String::class.java) ?: "NONE"
+                    val senderPhone = friendshipSnapshot.child("senderPhone").getValue(String::class.java) ?: ""
+                    if (status == "ACCEPTED") "FRIEND" else if (senderPhone == myPhone) "SENT" else "RECEIVED"
+                } else {
+                    "NONE"
+                }
+
+                FriendModel(formattedPhone, displayName, relationStatus)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+// Hàm Helper để hỗ trợ coroutine scope chạy trong listener NoSQL
+private fun viewModelScopeLaunch(block: suspend () -> Unit) {
+    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) { block() }
 }

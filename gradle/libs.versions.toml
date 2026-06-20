@@ -1,8 +1,7 @@
 [versions]
 supabase = "3.2.4"
 ktor = "3.0.1"
-
-agp = "9.0.0"
+agp = "9.0.1"
 browser = "1.10.0"
 coreKtx = "1.18.0"
 junit = "4.13.2"
