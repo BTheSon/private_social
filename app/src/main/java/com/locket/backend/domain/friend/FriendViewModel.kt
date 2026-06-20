@@ -9,51 +9,63 @@ import kotlinx.coroutines.launch
 
 class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
 
-    // Sub-tab active trong màn hình Bạn bè: 0 = Bạn bè, 1 = Lời mời, 2 = Gợi ý
     private val _activeSubTab = MutableStateFlow(0)
     val activeSubTab: StateFlow<Int> = _activeSubTab
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    // Trạng thái hiển thị danh sách động tùy thuộc vào Sub-tab hoặc Search Query
+    // Lắng nghe trực tiếp luồng bạn bè từ Cloud Firebase
+    private val firebaseFriendships = repository.observeFriendships()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Lọc danh sách động cho giao diện Local dựa vào cấu trúc Firebase biến động
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiFriendsList: StateFlow<List<FriendModel>> = combine(_activeSubTab, _searchQuery) { tab, query ->
-        Pair(tab, query)
-    }.flatMapLatest { (tab, query) ->
+    val uiFriendsList: StateFlow<List<FriendModel>> = combine(_activeSubTab, _searchQuery, firebaseFriendships) { tab, query, friendships ->
+        Triple(tab, query, friendships)
+    }.map { (tab, query, friendships) ->
         if (query.isNotEmpty()) {
-            repository.searchUsers(query)
+            friendships.filter { it.displayName.contains(query, ignoreCase = true) || it.phoneNumber.contains(query) }
         } else {
             when (tab) {
-                0 -> repository.friends
-                1 -> combine(repository.receivedInvites, repository.sentInvites) { rec, sent -> rec + sent }
-                else -> repository.suggestions
+                0 -> friendships.filter { it.relationStatus == "FRIEND" }
+                1 -> friendships.filter { it.relationStatus == "RECEIVED" || it.relationStatus == "SENT" }
+                else -> emptyList() // Chừa chỗ cho tab gợi ý nếu có
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
-        // Đổ dữ liệu mẫu ngay khi khởi tạo để test giao diện
+    // State phục vụ việc tìm kiếm trên Firebase thông qua Dialog
+    private val _isSearchingFirebase = MutableStateFlow(false)
+    val isSearchingFirebase: StateFlow<Boolean> = _isSearchingFirebase
+
+    private val _firebaseSearchResult = MutableStateFlow<FriendModel?>(null)
+    val firebaseSearchResult: StateFlow<FriendModel?> = _firebaseSearchResult
+
+    fun setSubTab(tab: Int) { _activeSubTab.value = tab }
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    fun searchUserOnFirebase(phone: String) {
         viewModelScope.launch {
-            repository.prepopulateMockData()
+            _isSearchingFirebase.value = true
+            val result = repository.findUserOnFirebase(phone)
+            _firebaseSearchResult.value = result ?: FriendModel("", "", "")
+            _isSearchingFirebase.value = false
         }
     }
 
-    fun setSubTab(tab: Int) {
-        _activeSubTab.value = tab
+    fun clearFirebaseSearch() {
+        _firebaseSearchResult.value = null
+        _isSearchingFirebase.value = false
     }
 
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
+    // Các hàm tương tác đẩy thẳng lệnh lên mây Firebase
     fun sendRequest(phone: String) = viewModelScope.launch { repository.sendFriendRequest(phone) }
     fun acceptRequest(phone: String) = viewModelScope.launch { repository.acceptFriendRequest(phone) }
-    fun removeFriendship(phone: String) = viewModelScope.launch { repository.cancelOrDeleteFriendship(phone) }
+    fun removeFriendship(phone: String) = viewModelScope.launch { repository.removeFriendship(phone) }
 }
 
-// Factory cho ViewModel
-class FriendsViewModelFactory(private val repository: FriendRepository) : ViewModelProvider.Factory {
+class FriendViewModelFactory(private val repository: FriendRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(FriendViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

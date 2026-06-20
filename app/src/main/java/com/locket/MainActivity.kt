@@ -11,9 +11,6 @@ import androidx.navigation.compose.rememberNavController
 import com.locket.backend.domain.auth.AuthViewModel
 import com.locket.backend.domain.auth.AuthViewModelFactory
 import com.locket.backend.domain.database.MDatabase
-import com.locket.backend.domain.friend.FriendRepository
-import com.locket.backend.domain.friend.FriendViewModel
-import com.locket.backend.domain.friend.FriendsViewModelFactory
 import com.locket.backend.domain.photo.PhotoRepository
 import com.locket.backend.domain.photo.PhotoViewModel
 import com.locket.backend.domain.photo.PhotoViewModelFactory
@@ -42,10 +39,9 @@ class MainActivity : ComponentActivity() {
 
         // Friend
 
-        val friendDao = mDatabase.friendDao()
-        val friendRepository = FriendRepository(friendDao)
-        val friendViewModel: FriendViewModel by viewModels {
-            FriendsViewModelFactory(friendRepository)
+        val friendRepository = com.locket.backend.domain.friend.FriendRepository() // Không cần truyền Dao nữa
+        val friendViewModel: com.locket.backend.domain.friend.FriendViewModel by viewModels {
+            com.locket.backend.domain.friend.FriendViewModelFactory(friendRepository)
         }
 
         // User
