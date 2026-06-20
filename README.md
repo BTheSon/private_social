@@ -107,12 +107,11 @@
 | State Management     | ViewModel + StateFlow         |
 | Local Database       | Room                          |
 | Authentication       | Firebase Phone Authentication |
-| Cloud Database       | Firebase Firestore            |
+| Cloud Database       | Realtime Database             |
 | Storage              | Supabase Storage              |
 | Music Search         | iTunes Search API             |
 | Image Loading        | Coil Compose                  |
 | Background Task      | WorkManager                   |
-| Dependency Injection | Hilt *(nếu kịp)*              |
 | Architecture         | MVVM                          |
 
 ---
