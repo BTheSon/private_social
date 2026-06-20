@@ -48,7 +48,6 @@ fun MainScreen(
                 postViewModel = postViewModel,
                 modifier = Modifier.fillMaxSize()
             )
-            1 -> GalleryScreen(viewModel = photoViewModel, modifier = Modifier.fillMaxSize())
             2 -> FriendScreen(viewModel = friendViewModel, modifier = Modifier.fillMaxSize())
             3 -> ProfileScreen(
                 viewModel = profileViewModel,
@@ -98,42 +97,6 @@ fun MainScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 "Máy Ảnh",
-                                color = Color(0xFFFFCC00),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(2.dp))
-
-                // Tab Gallery
-                val gallerySelected = activeTab == 1
-                IconButton(
-                    onClick = { photoViewModel.setActiveTab(1) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .background(
-                            color = if (gallerySelected) Color(0x33FFCC00) else Color.Transparent,
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = if (gallerySelected) Icons.Filled.GridView else Icons.Outlined.GridView,
-                            contentDescription = "Lưu trữ",
-                            tint = if (gallerySelected) Color(0xFFFFCC00) else Color.Gray,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        if (gallerySelected) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "Lưu Trữ",
                                 color = Color(0xFFFFCC00),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold
