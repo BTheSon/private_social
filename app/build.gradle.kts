@@ -133,6 +133,7 @@ dependencies {
     implementation(libs.supabase.auth)
     implementation(libs.supabase.storage)
     implementation(libs.supabase.postgrest)
+    implementation(libs.ktor.client.okhttp)
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
 
