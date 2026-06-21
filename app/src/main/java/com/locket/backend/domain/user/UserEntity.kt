@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class UserEntity(
     @PrimaryKey val phoneNumber: String,
     val displayName: String,
+    val avatarUrl: String,
     val isMe: Boolean = false
 )

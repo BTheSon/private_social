@@ -110,7 +110,7 @@ class AuthViewModel(private val userRepository: UserRepository) : ViewModel() {
                 val avatarUrl = snapshot.child("avatarUrl").getValue(String::class.java) ?: ""
                 val fcmToken = snapshot.child("fcmToken").getValue(String::class.java) ?: ""
 
-                userEntity = UserEntity(phone, displayName, isMe = true)
+                userEntity = UserEntity(phone, displayName, avatarUrl, isMe = true)
             } else {
                 // TÀI KHOẢN MỚI
                 val newDisplayName = "Locket_$phone".substring(0, 13)
@@ -121,7 +121,7 @@ class AuthViewModel(private val userRepository: UserRepository) : ViewModel() {
                 )
                 userRef.setValue(newUserMap).await()
 
-                userEntity = UserEntity(phone, newDisplayName, isMe = true)
+                userEntity = UserEntity(phone, newDisplayName, avatarUrl = "", isMe = true)
             }
 
             // LƯU XUỐNG ROOM

@@ -70,8 +70,19 @@ class FriendRepository {
     // 1. GỬI LỜI MỜI KẾT BẠN (Ghi song song vào cả 2 tài khoản)
     suspend fun sendFriendRequest(friendPhone: String) {
         if (myPhone.isEmpty() || myPhone == friendPhone) return
-        val timestamp = System.currentTimeMillis() / 1000
 
+        // --- LOGIC MỚI: Kiểm tra trạng thái hiện tại trên Firebase trước khi gửi ---
+        val currentFriendship = database.child("friendships").child(myPhone).child(friendPhone).get().await()
+        if (currentFriendship.exists()) {
+            val status = currentFriendship.child("status").getValue(String::class.java)
+            // Nếu ĐÃ LÀ BẠN hoặc ĐANG CÓ LỜI MỜI (Gửi/Nhận) thì tuyệt đối không cho gửi đè lệnh mới
+            if (status == "ACCEPTED" || status == "PENDING") {
+                return
+            }
+        }
+        // --------------------------------------------------------------------------
+
+        val timestamp = System.currentTimeMillis() / 1000
         val requestMap = mapOf(
             "status" to "PENDING",
             "senderPhone" to myPhone,
