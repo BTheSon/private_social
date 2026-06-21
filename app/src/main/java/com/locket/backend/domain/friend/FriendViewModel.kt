@@ -76,10 +76,10 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
     fun removeFriendship(phone: String) = viewModelScope.launch { repository.removeFriendship(phone) }
 
     fun syncContactsAndFindFriends(contactList: List<String>) {
-        // Chỗ này bạn của bạn sẽ viết code so khớp list số điện thoại 
-        // từ danh bạ với tài khoản Firestore để gợi ý kết bạn.
+        loadFriendSuggestions()
     }
 
+    @Volatile
     private var contactRepository: ContactRepository? = null
 
     private val _suggestionState = MutableStateFlow<SuggestionUiState>(SuggestionUiState.Idle)
