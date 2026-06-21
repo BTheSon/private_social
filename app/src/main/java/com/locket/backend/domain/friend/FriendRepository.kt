@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class FriendRepository {
+class FriendRepository(
+    private val externalScope: kotlinx.coroutines.CoroutineScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+) {
     private val database = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
 
@@ -32,7 +34,7 @@ class FriendRepository {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val list = mutableListOf<FriendModel>()
-                viewModelScopeLaunch {
+                externalScope.launch {
                     for (friendSnapshot in snapshot.children) {
                         val friendPhone = friendSnapshot.key ?: continue
                         val status = friendSnapshot.child("status").getValue(String::class.java) ?: "NONE"
@@ -146,9 +148,4 @@ class FriendRepository {
             null
         }
     }
-}
-
-// Hàm Helper để hỗ trợ coroutine scope chạy trong listener NoSQL
-private fun viewModelScopeLaunch(block: suspend () -> Unit) {
-    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) { block() }
 }

@@ -3,9 +3,20 @@ package com.locket.backend.domain.friend
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.locket.backend.domain.contact.ContactProvider
+import com.locket.backend.domain.contact.ContactRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+sealed interface SuggestionUiState {
+    object Idle : SuggestionUiState
+    object Loading : SuggestionUiState
+    object NoPermission : SuggestionUiState
+    data class Success(val suggestions: List<FriendModel>) : SuggestionUiState
+    data class Error(val message: String) : SuggestionUiState
+}
 
 class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
 
@@ -15,11 +26,9 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    // Lắng nghe trực tiếp luồng bạn bè từ Cloud Firebase
     private val firebaseFriendships = repository.observeFriendships()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Lọc danh sách động cho giao diện Local dựa vào cấu trúc Firebase biến động
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiFriendsList: StateFlow<List<FriendModel>> = combine(_activeSubTab, _searchQuery, firebaseFriendships) { tab, query, friendships ->
         Triple(tab, query, friendships)
@@ -30,17 +39,19 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
             when (tab) {
                 0 -> friendships.filter { it.relationStatus == "FRIEND" }
                 1 -> friendships.filter { it.relationStatus == "RECEIVED" || it.relationStatus == "SENT" }
-                else -> emptyList() // Chừa chỗ cho tab gợi ý nếu có
+                else -> emptyList()
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // State phục vụ việc tìm kiếm trên Firebase thông qua Dialog
     private val _isSearchingFirebase = MutableStateFlow(false)
     val isSearchingFirebase: StateFlow<Boolean> = _isSearchingFirebase
 
     private val _firebaseSearchResult = MutableStateFlow<FriendModel?>(null)
     val firebaseSearchResult: StateFlow<FriendModel?> = _firebaseSearchResult
+
+    private val _toastEvent = MutableSharedFlow<String>()
+    val toastEvent: SharedFlow<String> = _toastEvent.asSharedFlow()
 
     fun setSubTab(tab: Int) { _activeSubTab.value = tab }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
@@ -59,15 +70,81 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
         _isSearchingFirebase.value = false
     }
 
-    // Các hàm tương tác đẩy thẳng lệnh lên mây Firebase
     fun sendRequest(phone: String) = viewModelScope.launch { repository.sendFriendRequest(phone) }
     fun acceptRequest(phone: String) = viewModelScope.launch { repository.acceptFriendRequest(phone) }
     
     fun removeFriendship(phone: String) = viewModelScope.launch { repository.removeFriendship(phone) }
 
     fun syncContactsAndFindFriends(contactList: List<String>) {
-        // Chỗ này bạn của bạn sẽ viết code so khớp list số điện thoại 
-        // từ danh bạ với tài khoản Firestore để gợi ý kết bạn.
+        loadFriendSuggestions()
+    }
+
+    @Volatile
+    private var contactRepository: ContactRepository? = null
+
+    private val _suggestionState = MutableStateFlow<SuggestionUiState>(SuggestionUiState.Idle)
+    val suggestionState: StateFlow<SuggestionUiState> = _suggestionState
+
+    fun initContactRepository(contactProvider: ContactProvider) {
+        if (contactRepository == null) {
+            contactRepository = ContactRepository(contactProvider)
+        }
+    }
+
+    fun hasContactPermission(): Boolean = contactRepository?.hasContactPermission() ?: false
+
+    fun loadFriendSuggestions() {
+        val repo = contactRepository ?: return
+        if (!repo.hasContactPermission()) {
+            _suggestionState.value = SuggestionUiState.NoPermission
+            return
+        }
+
+        viewModelScope.launch {
+            _suggestionState.value = SuggestionUiState.Loading
+            runCatching {
+                val myPhoneNumber = FirebaseAuth.getInstance().currentUser?.phoneNumber ?: ""
+                repo.getFriendSuggestions(myPhoneNumber)
+            }.onSuccess { list ->
+                _suggestionState.value = SuggestionUiState.Success(list)
+            }.onFailure { e ->
+                _suggestionState.value = SuggestionUiState.Error(e.message ?: "Đã có lỗi xảy ra")
+            }
+        }
+    }
+
+    fun onAddContactFriendClicked(phone: String) {
+        viewModelScope.launch {
+            val existingFriendships = firebaseFriendships.value
+            val existingRelation = existingFriendships.find { it.phoneNumber == phone }
+
+            if (existingRelation != null) {
+                when (existingRelation.relationStatus) {
+                    "FRIEND" -> {
+                        _toastEvent.emit("Người này đã là bạn bè của bạn")
+                        return@launch
+                    }
+                    "SENT", "RECEIVED" -> {
+                        _toastEvent.emit("Đã có lời mời kết bạn đang chờ")
+                        return@launch
+                    }
+                }
+            }
+
+            val repo = contactRepository ?: return@launch
+            val existsOnFirebase = repo.checkUserExistsOnFirebase(phone)
+            
+            if (!existsOnFirebase) {
+                _toastEvent.emit("Số điện thoại chưa đăng ký app")
+            } else {
+                sendRequest(phone)
+                _toastEvent.emit("Đã gửi lời mời kết bạn")
+            }
+        }
+    }
+
+    fun onContactPermissionDenied() {
+        _suggestionState.value = SuggestionUiState.NoPermission
     }
 }
 

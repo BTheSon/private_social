@@ -10,8 +10,13 @@ class SyncContactsWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        // Logic đồng bộ ngầm định kỳ
-        // Bạn của bạn sẽ điền code đọc danh bạ và gọi API gợi ý bạn bè ở đây
-        return Result.success()
+        return try {
+            val contactProvider = com.locket.backend.domain.contact.ContactProvider(applicationContext)
+            if (!contactProvider.hasPermission()) return Result.failure()
+            // Logic đồng bộ ngầm định kỳ
+            Result.success()
+        } catch (e: Exception) {
+            Result.retry()
+        }
     }
 }
