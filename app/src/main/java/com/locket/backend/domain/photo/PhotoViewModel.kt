@@ -227,14 +227,17 @@ class PhotoViewModel(
                 return
             }
 
-            val currentUserId = FirebaseClientService.auth.currentUser?.phoneNumber
-                ?: FirebaseClientService.auth.currentUser?.uid
+            val currentUser = FirebaseClientService.auth.currentUser
+            val currentUserId = currentUser?.phoneNumber
+                ?: currentUser?.uid
                 ?: "unknown"
+            val currentUserName = currentUser?.displayName ?: ""
 
             val post = PostModel(
                 userId = currentUserId,
                 imageUrl = imageUrl,
                 caption = draft.caption,
+                authorName = currentUserName,
                 songName = draft.songName,
                 artistName = draft.artistName,
                 previewUrl = draft.previewUrl

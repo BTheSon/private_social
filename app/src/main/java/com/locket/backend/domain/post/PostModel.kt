@@ -5,6 +5,7 @@ data class PostModel(
     val userId: String = "",
     val imageUrl: String = "",
     val caption: String = "",
+    val authorName: String = "",
     val songName: String? = null,
     val artistName: String? = null,
     val previewUrl: String? = null,
