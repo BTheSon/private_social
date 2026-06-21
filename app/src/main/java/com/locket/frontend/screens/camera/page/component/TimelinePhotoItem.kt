@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
@@ -49,7 +50,9 @@ fun TimelinePhotoItem(
     modifier: Modifier = Modifier,
     isDraft: Boolean = false,
     draftStatus: String? = null,
-    onRetry: () -> Unit = {}
+    currentUserId: String = "",
+    onRetry: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     val formattedDateTime = run {
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
@@ -102,8 +105,23 @@ fun TimelinePhotoItem(
                     text = displayAuthorName,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    modifier = Modifier.weight(1f)
                 )
+                // Nút xóa chỉ hiện khi bài đăng là của mình
+                if (!isDraft && currentUserId.isNotEmpty() && post.userId == currentUserId) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Xóa bài đăng",
+                            tint = Color(0xFFFF5555),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
             // Ảnh bài đăng (load từ URL Supabase hoặc local draft)

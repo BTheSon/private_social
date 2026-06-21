@@ -7,6 +7,7 @@ import com.locket.backend.domain.database.DraftDao
 import com.locket.backend.domain.database.DraftEntity
 import com.locket.backend.domain.music.ItunesRepository
 import com.locket.backend.domain.music.SongModel
+import com.locket.backend.service.FirebaseClientService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,12 @@ class PostViewModel(
             initialValue = emptyList()
         )
 
+    val currentUserId: String
+        get() {
+            val user = FirebaseClientService.auth.currentUser
+            return user?.phoneNumber ?: user?.uid ?: ""
+        }
+
     init {
         loadPosts()
     }
@@ -45,6 +52,16 @@ class PostViewModel(
     fun loadPosts() {
         viewModelScope.launch {
             _posts.value = postRepository.getPostsForFeed()
+        }
+    }
+
+    fun deletePost(postId: String) {
+        viewModelScope.launch {
+            val success = postRepository.deletePost(postId)
+            if (success) {
+                // Xóa khỏi danh sách local ngay lập tức cho UX mượt
+                _posts.value = _posts.value.filter { it.id != postId }
+            }
         }
     }
 

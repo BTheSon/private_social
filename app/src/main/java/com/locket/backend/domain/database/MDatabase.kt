@@ -11,7 +11,7 @@ import com.locket.backend.domain.photo.PhotoEntity
 import com.locket.backend.domain.user.UserDao
 import com.locket.backend.domain.user.UserEntity
 
-@Database(entities = [PhotoEntity::class, UserEntity::class, FriendshipEntity::class, DraftEntity::class], version = 4, exportSchema = false)
+@Database(entities = [PhotoEntity::class, UserEntity::class, FriendshipEntity::class, DraftEntity::class], version = 5, exportSchema = false)
 abstract class MDatabase : RoomDatabase() {
     abstract fun photoDao(): PhotoDao
     abstract fun friendDao(): FriendDao

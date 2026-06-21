@@ -25,7 +25,9 @@ import com.locket.backend.domain.post.PostModel
 fun TimelineHistoryPage(
     posts: List<PostModel>,
     failedDrafts: List<DraftEntity> = emptyList(),
+    currentUserId: String = "",
     onRetryDraft: (DraftEntity) -> Unit = {},
+    onDeletePost: (String) -> Unit = {},
     onBackClick: () -> Unit
 ) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { posts.size + failedDrafts.size })
@@ -133,7 +135,9 @@ fun TimelineHistoryPage(
                     val post = posts[page - failedDrafts.size]
                     TimelinePhotoItem(
                         post = post,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        currentUserId = currentUserId,
+                        onDelete = { onDeletePost(post.id) }
                     )
                 }
             }

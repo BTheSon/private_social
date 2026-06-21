@@ -45,6 +45,17 @@ class PostRepository {
         }
     }
 
+    suspend fun deletePost(postId: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext try {
+            database.getReference("posts").child(postId).removeValue().await()
+            Log.d("PostRepository", "deletePost SUCCESS: $postId")
+            true
+        } catch (e: Exception) {
+            Log.e("PostRepository", "deletePost FAILED: ${e.message}", e)
+            false
+        }
+    }
+
     suspend fun getPosts(): List<PostModel> = withContext(Dispatchers.IO) {
         return@withContext try {
             val snapshot = database.getReference("posts").get().await()
