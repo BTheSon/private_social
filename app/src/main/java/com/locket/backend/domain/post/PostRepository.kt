@@ -56,4 +56,47 @@ class PostRepository {
             emptyList()
         }
     }
+
+    /**
+     * Tải bài đăng cho Feed: chỉ lấy bài của mình + bạn bè (status = ACCEPTED).
+     * 1. Lấy userId hiện tại (phoneNumber hoặc uid)
+     * 2. Lấy danh sách bạn bè đã ACCEPTED từ /friendships/{myPhone}
+     * 3. Lọc toàn bộ /posts, chỉ giữ lại bài có userId thuộc set {mình, bạn bè}
+     */
+    suspend fun getPostsForFeed(): List<PostModel> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val currentUser = FirebaseClientService.auth.currentUser
+            val myId = currentUser?.phoneNumber
+                ?: currentUser?.uid
+                ?: return@withContext emptyList()
+
+            // Lấy danh sách bạn bè đã ACCEPTED
+            val friendIds = mutableSetOf(myId)
+            try {
+                val friendshipsSnapshot = database.getReference("friendships")
+                    .child(myId).get().await()
+                for (child in friendshipsSnapshot.children) {
+                    val status = child.child("status").getValue(String::class.java)
+                    if (status == "ACCEPTED") {
+                        child.key?.let { friendIds.add(it) }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("PostRepository", "Could not load friendships, showing only own posts", e)
+            }
+
+            Log.d("PostRepository", "Feed filter: loading posts for ${friendIds.size} users (me + ${friendIds.size - 1} friends)")
+
+            // Tải tất cả bài đăng rồi lọc theo danh sách bạn bè
+            val postsSnapshot = database.getReference("posts").get().await()
+            postsSnapshot.children.mapNotNull { child ->
+                child.getValue(PostModel::class.java)
+            }.filter { post ->
+                post.userId in friendIds
+            }.sortedByDescending { it.createdAt }
+        } catch (e: Exception) {
+            Log.e("PostRepository", "getPostsForFeed FAILED", e)
+            emptyList()
+        }
+    }
 }

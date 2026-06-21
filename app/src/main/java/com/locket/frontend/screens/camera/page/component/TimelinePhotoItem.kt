@@ -79,10 +79,9 @@ fun TimelinePhotoItem(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             // Tên người đăng
-            val displayAuthorName = if (post.authorName.isNotEmpty()) {
-                post.authorName
-            } else {
-                val shortId = if (post.userId.length >= 5) post.userId.take(5) else post.userId.padEnd(5, '0')
+            val displayAuthorName = post.authorName.ifEmpty {
+                val shortId =
+                    if (post.userId.length >= 5) post.userId.takeLast(3) else post.userId.padEnd(3, '0')
                 "noname-$shortId"
             }
             

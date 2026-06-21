@@ -44,7 +44,7 @@ class PostViewModel(
 
     fun loadPosts() {
         viewModelScope.launch {
-            _posts.value = postRepository.getPosts()
+            _posts.value = postRepository.getPostsForFeed()
         }
     }
 
