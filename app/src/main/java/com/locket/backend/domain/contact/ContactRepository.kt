@@ -2,79 +2,49 @@ package com.locket.backend.domain.contact
 
 import com.google.firebase.database.FirebaseDatabase
 import com.locket.backend.domain.friend.FriendModel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class ContactRepository(
     private val contactProvider: ContactProvider,
     private val firebaseDatabase: FirebaseDatabase = FirebaseDatabase.getInstance()
 ) {
 
-    companion object {
-        // Số request gọi đồng thời tối đa lên Firebase trong 1 lô.
-        private const val CHUNK_SIZE = 25
-    }
-
-    //cái đây để gợi ý bạn bè nè mà chưa dám thêm
     suspend fun getFriendSuggestions(
-        myPhoneNumber: String,
-        existingRelationNumbers: Set<String>
-    ): List<FriendModel> {
-        if (!contactProvider.hasPermission()) return emptyList()
+        myPhoneNumber: String
+    ): List<FriendModel> = withContext(Dispatchers.IO) {
+        if (!contactProvider.hasPermission()) return@withContext emptyList()
 
         val deviceContacts = contactProvider.getDeviceContacts()
-        if (deviceContacts.isEmpty()) return emptyList()
+        if (deviceContacts.isEmpty()) return@withContext emptyList()
 
-        // Danh sách ứng viên: loại bản thân + loại người đã có quan hệ + bỏ trùng
-        val candidateNumbers = deviceContacts
-            .map { it.normalizedPhoneNumber }
-            .distinct()
-            .filter { it != myPhoneNumber && it !in existingRelationNumbers }
-
-        if (candidateNumbers.isEmpty()) return emptyList()
-
-        // Map ngược lại để lấy tên trong danh bạ máy làm fallback nếu user chưa có displayName trên Firebase
-        val contactNameMap = deviceContacts.associateBy(
-            { it.normalizedPhoneNumber },
-            { it.Name }
-        )
-
-        val usersRef = firebaseDatabase.getReference("users")
         val suggestions = mutableListOf<FriendModel>()
-
-        // Chia thành từng lô để tránh quá tải, mỗi lô gọi song song
-        candidateNumbers.chunked(CHUNK_SIZE).forEach { chunk ->
-            val results = coroutineScope {
-                chunk.map { phone ->
-                    async {
-                        phone to runCatching {
-                            usersRef.child(phone).get().await()
-                        }.getOrNull()
-                    }
-                }.map { it.await() }
-            }
-
-            for ((phone, snapshot) in results) {
-                if (snapshot != null && snapshot.exists()) {
-                    val appDisplayName = snapshot.child("displayName").getValue(String::class.java)
-
-                    // FriendRowItem hiển thị avatar bằng chữ cái đầu của displayName,
-                    // không dùng ảnh thật -> FriendModel không cần field avatarUrl.
-                    suggestions.add(
-                        FriendModel(
-                            phoneNumber = phone,
-                            displayName = appDisplayName ?: contactNameMap[phone] ?: phone,
-                            relationStatus = "NONE"
-                        )
+        
+        deviceContacts
+            .filter { it.normalizedPhoneNumber != myPhoneNumber }
+            .distinctBy { it.normalizedPhoneNumber }
+            .forEach { contact ->
+                suggestions.add(
+                    FriendModel(
+                        phoneNumber = contact.normalizedPhoneNumber,
+                        displayName = contact.Name,
+                        relationStatus = "NONE"
                     )
-                }
+                )
             }
-        }
 
-        return suggestions
+        return@withContext suggestions
     }
 
-    // trong ContactRepository
+    suspend fun checkUserExistsOnFirebase(phone: String): Boolean {
+        return try {
+            val snapshot = firebaseDatabase.getReference("users").child(phone).get().await()
+            snapshot.exists()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun hasContactPermission(): Boolean = contactProvider.hasPermission()
-}
+}

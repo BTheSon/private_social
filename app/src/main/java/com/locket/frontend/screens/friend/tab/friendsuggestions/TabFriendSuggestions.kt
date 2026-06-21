@@ -1,6 +1,7 @@
 package com.locket.frontend.screens.friend.tab.friendsuggestions
 
 import android.Manifest
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -35,17 +36,40 @@ fun TabFriendSuggestions(viewModel: FriendViewModel) {
     }
 
     LaunchedEffect(Unit) {
-        viewModel.initContactRepository(ContactProvider(context))
-        if (viewModel.hasContactPermission()) {
-            viewModel.loadFriendSuggestions()
-        } else {
-            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        viewModel.initContactRepository(ContactProvider(context.applicationContext))
+        
+        viewModel.toastEvent.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val s = state) {
-            is SuggestionUiState.Idle, is SuggestionUiState.Loading -> {
+            is SuggestionUiState.Idle -> {
+                Column(
+                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "Đồng bộ danh bạ để tìm bạn bè.",
+                        color = Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        fontSize = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = {
+                        if (viewModel.hasContactPermission()) {
+                            viewModel.loadFriendSuggestions()
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                        }
+                    }) {
+                        Text("Tải danh bạ")
+                    }
+                }
+            }
+
+            is SuggestionUiState.Loading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
@@ -55,7 +79,7 @@ fun TabFriendSuggestions(viewModel: FriendViewModel) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Cho phép truy cập danh bạ để xem gợi ý kết bạn.",
+                        "Cho phép truy cập danh bạ để hiển thị danh sách.",
                         color = Color.DarkGray,
                         textAlign = TextAlign.Center,
                         fontSize = 15.sp
@@ -82,7 +106,7 @@ fun TabFriendSuggestions(viewModel: FriendViewModel) {
             is SuggestionUiState.Success -> {
                 if (s.suggestions.isEmpty()) {
                     Text(
-                        "Gợi ý kết bạn từ danh bạ sẽ xuất hiện ở đây.",
+                        "Không có dữ liệu danh bạ.",
                         color = Color.DarkGray,
                         textAlign = TextAlign.Center,
                         fontSize = 15.sp,
@@ -93,7 +117,7 @@ fun TabFriendSuggestions(viewModel: FriendViewModel) {
                         items(s.suggestions, key = { it.phoneNumber }) { friend ->
                             SuggestionRow(
                                 friend = friend,
-                                onAddClick = { viewModel.sendRequest(friend.phoneNumber) }
+                                onAddClick = { viewModel.onAddContactFriendClicked(friend.phoneNumber) }
                             )
                         }
                     }
@@ -121,7 +145,7 @@ private fun SuggestionRow(friend: FriendModel, onAddClick: () -> Unit) {
             Text(friend.phoneNumber, color = Color.Gray, fontSize = 13.sp)
         }
         OutlinedButton(onClick = onAddClick) {
-            Text("Thêm")
+            Text("Kết bạn")
         }
     }
 }
