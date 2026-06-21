@@ -49,6 +49,7 @@ class ContactsReader(private val context: Context) {
             }
         }
 
+
         contacts
     }
 }
