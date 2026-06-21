@@ -12,13 +12,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import com.locket.backend.domain.friend.FriendViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,18 +114,29 @@ fun FirebaseSearchDialog(
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(Color(0xFF2D2D2D), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = searchResult!!.displayName.take(1).uppercase(),
-                                    color = Color(0xFFFFCC00),
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 16.sp
+                            if (searchResult!!.avatarUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = searchResult!!.avatarUrl,
+                                    contentDescription = "Avatar",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
                                 )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(Color(0xFF2D2D2D), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = searchResult!!.displayName.take(1).uppercase(),
+                                        color = Color(0xFFFFCC00),
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 16.sp
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.width(12.dp))

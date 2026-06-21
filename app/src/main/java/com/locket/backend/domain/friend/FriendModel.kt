@@ -3,5 +3,6 @@ package com.locket.backend.domain.friend
 data class FriendModel(
     val phoneNumber: String,
     val displayName: String,
+    val avatarUrl: String = "",
     val relationStatus: String // "NONE", "SENT", "RECEIVED", "FRIEND"
 )

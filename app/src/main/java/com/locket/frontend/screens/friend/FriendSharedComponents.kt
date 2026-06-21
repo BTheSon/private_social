@@ -14,10 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.locket.backend.domain.friend.FriendModel
 
 // 1. Item hiển thị 1 User (Dùng chung cho mọi Tab)
@@ -37,16 +40,29 @@ fun FriendRowItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(46.dp).background(Color(0xFF2D2D2D), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = item.displayName.take(1).uppercase(),
-                color = Color(0xFFFFCC00),
-                fontWeight = FontWeight.Black,
-                fontSize = 18.sp
+        if (item.avatarUrl.isNotEmpty()) {
+            AsyncImage(
+                model = item.avatarUrl,
+                contentDescription = "Avatar",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(Color(0xFF2D2D2D), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = item.displayName.take(1).uppercase(),
+                    color = Color(0xFFFFCC00),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(14.dp))

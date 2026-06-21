@@ -60,7 +60,7 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
         viewModelScope.launch {
             _isSearchingFirebase.value = true
             val result = repository.findUserOnFirebase(phone)
-            _firebaseSearchResult.value = result ?: FriendModel("", "", "")
+            _firebaseSearchResult.value = result ?: FriendModel("", "", "", "")
             _isSearchingFirebase.value = false
         }
     }

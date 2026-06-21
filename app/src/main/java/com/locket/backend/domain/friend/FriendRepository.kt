@@ -52,8 +52,9 @@ class FriendRepository(
                         // Lấy thêm displayName từ bảng users của đối phương để hiển thị
                         val userSnapshot = database.child("users").child(friendPhone).get().await()
                         val displayName = userSnapshot.child("displayName").getValue(String::class.java) ?: "User $friendPhone"
+                        val avatarUrl = userSnapshot.child("avatarUrl").getValue(String::class.java) ?: ""
 
-                        list.add(FriendModel(friendPhone, displayName, relationStatus))
+                        list.add(FriendModel(friendPhone, displayName, avatarUrl, relationStatus))
                     }
                     trySend(list)
                 }
@@ -129,7 +130,7 @@ class FriendRepository(
             val userSnapshot = database.child("users").child(formattedPhone).get().await()
             if (userSnapshot.exists()) {
                 val displayName = userSnapshot.child("displayName").getValue(String::class.java) ?: "Locket User"
-
+                val avatarUrl = userSnapshot.child("avatarUrl").getValue(String::class.java) ?: ""
                 // Kiểm tra xem hiện tại đã có mối quan hệ nào chưa
                 val friendshipSnapshot = database.child("friendships").child(myPhone).child(formattedPhone).get().await()
                 val relationStatus = if (friendshipSnapshot.exists()) {
@@ -140,7 +141,7 @@ class FriendRepository(
                     "NONE"
                 }
 
-                FriendModel(formattedPhone, displayName, relationStatus)
+                FriendModel(formattedPhone, displayName, avatarUrl, relationStatus)
             } else {
                 null
             }

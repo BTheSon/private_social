@@ -21,7 +21,7 @@ interface FriendDao {
 
     // 1. Lấy danh sách bạn bè (Đã ACCEPTED)
     @Query("""
-        SELECT u.phoneNumber, u.displayName, 'FRIEND' as relationStatus 
+        SELECT u.phoneNumber, u.displayName, u.avatarUrl, 'FRIEND' as relationStatus 
         FROM users u
         INNER JOIN friendships f ON (f.senderPhone = u.phoneNumber OR f.receiverPhone = u.phoneNumber)
         WHERE u.isMe = 0 AND f.status = 'ACCEPTED' 
@@ -32,7 +32,7 @@ interface FriendDao {
 
     // 2. Lấy lời mời đã nhận (PENDING và mình là Người nhận)
     @Query("""
-        SELECT u.phoneNumber, u.displayName, 'RECEIVED' as relationStatus 
+        SELECT u.phoneNumber, u.displayName, u.avatarUrl, 'RECEIVED' as relationStatus 
         FROM users u
         INNER JOIN friendships f ON f.senderPhone = u.phoneNumber
         WHERE f.status = 'PENDING' 
@@ -42,7 +42,7 @@ interface FriendDao {
 
     // 3. Lấy lời mời đã gửi (PENDING và mình là Người gửi)
     @Query("""
-        SELECT u.phoneNumber, u.displayName, 'SENT' as relationStatus 
+        SELECT u.phoneNumber, u.displayName, u.avatarUrl, 'SENT' as relationStatus 
         FROM users u
         INNER JOIN friendships f ON f.receiverPhone = u.phoneNumber
         WHERE f.status = 'PENDING' 
@@ -52,7 +52,7 @@ interface FriendDao {
 
     // 4. Gợi ý kết bạn (Những người không có trong bảng mối quan hệ và không phải là mình)
     @Query("""
-        SELECT u.phoneNumber, u.displayName, 'NONE' as relationStatus 
+        SELECT u.phoneNumber, u.displayName, u.avatarUrl, 'NONE' as relationStatus 
         FROM users u
         WHERE u.isMe = 0 
         AND u.phoneNumber NOT IN (
@@ -63,9 +63,9 @@ interface FriendDao {
     """)
     fun getSuggestions(): Flow<List<FriendModel>>
 
-    // Tìm kiếm người dùng theo tên hoặc số điện thoại (Không bao gồm bản thân)
+    // 5. Tìm kiếm người dùng theo tên hoặc số điện thoại (Không bao gồm bản thân)
     @Query("""
-        SELECT u.phoneNumber, u.displayName, 
+        SELECT u.phoneNumber, u.displayName, u.avatarUrl, 
         CASE 
             WHEN f.status = 'ACCEPTED' THEN 'FRIEND'
             WHEN f.status = 'PENDING' AND f.senderPhone = (SELECT phoneNumber FROM users WHERE isMe = 1 LIMIT 1) THEN 'SENT'
