@@ -123,7 +123,9 @@ fun CameraContent(
                     TimelineHistoryPage(
                         posts = posts,
                         failedDrafts = pendingDrafts,
+                        currentUserId = postViewModel.currentUserId,
                         onRetryDraft = { draft -> photoViewModel.retryPost(draft) },
+                        onDeletePost = { postId -> postViewModel.deletePost(postId) },
                         onBackClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
                     )
                 }
