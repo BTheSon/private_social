@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
@@ -231,13 +232,26 @@ class PhotoViewModel(
             val currentUserId = currentUser?.phoneNumber
                 ?: currentUser?.uid
                 ?: "unknown"
-            val currentUserName = currentUser?.displayName ?: ""
+
+            var currentUserName = "User"
+            var currentUserAvatar = ""
+
+            try {
+                val snapshot = FirebaseClientService.database.reference.child("users").child(currentUserId).get().await()
+                if (snapshot.exists()) {
+                    currentUserName = snapshot.child("displayName").getValue(String::class.java) ?: "User"
+                    currentUserAvatar = snapshot.child("avatarUrl").getValue(String::class.java) ?: ""
+                }
+            } catch (e: Exception) {
+                Log.e("PhotoViewModel", "executeBackgroundPost: Error fetching user profile", e)
+            }
 
             val post = PostModel(
                 userId = currentUserId,
                 imageUrl = imageUrl,
                 caption = draft.caption,
                 authorName = currentUserName,
+                authorAvatar = currentUserAvatar,
                 songName = draft.songName,
                 artistName = draft.artistName,
                 previewUrl = draft.previewUrl
