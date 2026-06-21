@@ -3,10 +3,20 @@ package com.locket.backend.domain.friend
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.locket.backend.domain.contact.ContactProvider
+import com.locket.backend.domain.contact.ContactRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+sealed interface SuggestionUiState {
+    object Idle : SuggestionUiState
+    object Loading : SuggestionUiState
+    object NoPermission : SuggestionUiState
+    data class Success(val suggestions: List<FriendModel>) : SuggestionUiState
+    data class Error(val message: String) : SuggestionUiState
+}
 class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
 
     private val _activeSubTab = MutableStateFlow(0)
@@ -69,6 +79,50 @@ class FriendViewModel(private val repository: FriendRepository) : ViewModel() {
         // Chỗ này bạn của bạn sẽ viết code so khớp list số điện thoại 
         // từ danh bạ với tài khoản Firestore để gợi ý kết bạn.
     }
+
+    private var contactRepository: ContactRepository? = null
+
+    private val _suggestionState = MutableStateFlow<SuggestionUiState>(SuggestionUiState.Idle)
+    val suggestionState: StateFlow<SuggestionUiState> = _suggestionState
+
+    // Gọi 1 lần từ UI (Composable) khi có Context, không cần sửa constructor/factory hiện tại
+    fun initContactRepository(contactProvider: ContactProvider) {
+        if (contactRepository == null) {
+            contactRepository = ContactRepository(contactProvider)
+        }
+    }
+
+    fun hasContactPermission(): Boolean = contactRepository?.hasContactPermission() ?: false
+
+    fun loadFriendSuggestions() {
+        val repo = contactRepository ?: return
+        if (!repo.hasContactPermission()) {
+            _suggestionState.value = SuggestionUiState.NoPermission
+            return
+        }
+
+        viewModelScope.launch {
+            _suggestionState.value = SuggestionUiState.Loading
+            runCatching {
+                val myPhoneNumber = FirebaseAuth.getInstance().currentUser?.phoneNumber ?: ""
+                // Dùng luôn danh sách friendships đang lắng nghe sẵn từ Firebase
+                // để loại những số đã là bạn / đã gửi-nhận lời mời
+                val existingRelationNumbers = firebaseFriendships.value
+                    .map { it.phoneNumber }
+                    .toSet()
+
+                repo.getFriendSuggestions(myPhoneNumber, existingRelationNumbers)
+            }.onSuccess { list ->
+                _suggestionState.value = SuggestionUiState.Success(list)
+            }.onFailure { e ->
+                _suggestionState.value = SuggestionUiState.Error(e.message ?: "Đã có lỗi xảy ra")
+            }
+        }
+    }
+
+    fun onContactPermissionDenied() {
+        _suggestionState.value = SuggestionUiState.NoPermission
+    }
 }
 
 class FriendsViewModelFactory(private val repository: FriendRepository) : ViewModelProvider.Factory {
@@ -79,4 +133,6 @@ class FriendsViewModelFactory(private val repository: FriendRepository) : ViewMo
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
+
+
 }

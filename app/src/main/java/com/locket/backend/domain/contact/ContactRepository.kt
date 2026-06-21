@@ -74,4 +74,7 @@ class ContactRepository(
 
         return suggestions
     }
+
+    // trong ContactRepository
+    fun hasContactPermission(): Boolean = contactProvider.hasPermission()
 }
