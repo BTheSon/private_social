@@ -50,14 +50,15 @@ class MainActivity : ComponentActivity() {
 
         // Photo (inject PostRepository để thực hiện upload sau khi chụp)
         val photoDao = mDatabase.photoDao()
+        val draftDao = mDatabase.draftDao()
         val photoRepository = PhotoRepository(photoDao)
         val photoViewModel: PhotoViewModel by viewModels {
-            PhotoViewModelFactory(application, photoRepository, postRepository)
+            PhotoViewModelFactory(application, photoRepository, postRepository, draftDao)
         }
 
         // Post (music search + timeline posts)
         val postViewModel: PostViewModel by viewModels {
-            PostViewModelFactory(postRepository, itunesRepository)
+            PostViewModelFactory(postRepository, itunesRepository, draftDao)
         }
 
         // Friend

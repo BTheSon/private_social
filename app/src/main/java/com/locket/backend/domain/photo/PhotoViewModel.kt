@@ -16,10 +16,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.locket.backend.domain.database.DraftDao
+import com.locket.backend.domain.database.DraftEntity
 import com.locket.backend.domain.music.SongModel
 import com.locket.backend.domain.post.PostModel
 import com.locket.backend.domain.post.PostRepository
 import com.locket.backend.service.FirebaseClientService
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +37,8 @@ import java.util.UUID
 class PhotoViewModel(
     application: Application,
     private val repository: PhotoRepository,
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val draftDao: DraftDao
 ) : AndroidViewModel(application) {
 
     val allPhotos: StateFlow<List<PhotoEntity>> = repository.allPhotos
@@ -144,85 +148,112 @@ class PhotoViewModel(
     }
 
     /**
-     * Luồng đăng bài hoàn chỉnh:
-     * 1. Crop ảnh tạm thành 1:1
-     * 2. Upload lên Supabase Storage → lấy imageUrl
-     * 3. Lưu PostModel lên Firebase Realtime Database
-     * 4. Lưu ảnh vào Room DB local
-     *
-     * [isCapturing] được set true trong suốt quá trình để hiển thị loading overlay.
+     * Bắt đầu quá trình lưu nháp và đăng bài nền (Background Post)
+     * Trả về ngay lập tức để UI đóng màn hình.
      */
-    fun processAndPost(
+    fun initiatePost(
         context: Context,
         tempFile: File,
         caption: String,
         song: SongModel?,
-        onResult: (Boolean) -> Unit
+        onDraftCreated: () -> Unit
     ) {
-        _isCapturing.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // 1. Crop 1:1
-                val photosDir = File(context.filesDir, "captured_photos")
-                if (!photosDir.exists()) photosDir.mkdirs()
-                val processedFile = File(photosDir, "IMG_${System.currentTimeMillis()}.jpg")
-                val processed = processAndSaveSquare(tempFile, processedFile)
+            // 1. Chuyển file ảnh tạm vào thư mục filesDir để lưu trữ an toàn làm bản nháp
+            val draftsDir = File(context.filesDir, "drafts")
+            if (!draftsDir.exists()) draftsDir.mkdirs()
+            val draftImageFile = File(draftsDir, "draft_${UUID.randomUUID()}.jpg")
+            
+            // Cắt ảnh 1:1 trước khi lưu thành nháp
+            val processed = processAndSaveSquare(tempFile, draftImageFile)
+            if (tempFile.exists()) tempFile.delete()
 
-                if (tempFile.exists()) tempFile.delete()
-
-                if (!processed) {
-                    Log.e("PhotoViewModel", "processAndPost: processAndSaveSquare FAILED")
-                    _isCapturing.value = false
-                    withContext(Dispatchers.Main) { onResult(false) }
-                    return@launch
-                }
-                Log.d("PhotoViewModel", "processAndPost: image processed OK → ${processedFile.absolutePath} (${processedFile.length()} bytes)")
-
-                // 2. Upload Supabase Storage
-                val bytes = processedFile.readBytes()
-                Log.d("PhotoViewModel", "processAndPost: uploading ${bytes.size} bytes to Supabase...")
-                val imageUrl = postRepository.uploadImageToSupabase(bytes)
-
-                if (imageUrl.isNullOrEmpty()) {
-                    Log.e("PhotoViewModel", "processAndPost: Supabase upload FAILED — imageUrl is null/empty")
-                    // Vẫn lưu local dù cloud thất bại
-                    repository.insertPhoto(PhotoEntity(filePath = processedFile.absolutePath))
-                    _isCapturing.value = false
-                    withContext(Dispatchers.Main) { onResult(false) }
-                    return@launch
-                }
-                Log.d("PhotoViewModel", "processAndPost: Supabase upload OK → $imageUrl")
-
-                // 3. Lưu Firebase RTDB
-                val currentUserId = FirebaseClientService.auth.currentUser?.phoneNumber
-                    ?: FirebaseClientService.auth.currentUser?.uid
-                    ?: "unknown"
-
-                val post = PostModel(
-                    userId = currentUserId,
-                    imageUrl = imageUrl,
-                    caption = caption,
-                    songName = song?.trackName,
-                    artistName = song?.artistName,
-                    previewUrl = song?.previewUrl
-                )
-                Log.d("PhotoViewModel", "processAndPost: saving post to Firebase RTDB as userId=$currentUserId...")
-                val saved = postRepository.savePost(post)
-
-                if (!saved) {
-                    Log.e("PhotoViewModel", "processAndPost: Firebase RTDB savePost FAILED")
-                }
-
-                // 4. Lưu Room local
-                repository.insertPhoto(PhotoEntity(filePath = processedFile.absolutePath))
-
-                _isCapturing.value = false
-                withContext(Dispatchers.Main) { onResult(saved) }
-            } catch (e: Exception) {
-                Log.e("PhotoViewModel", "processAndPost: EXCEPTION — ${e.javaClass.simpleName}: ${e.message}", e)
-                _isCapturing.value = false
-                withContext(Dispatchers.Main) { onResult(false) }
+            if (!processed) {
+                Log.e("PhotoViewModel", "processAndSaveSquare FAILED for Draft")
+                withContext(Dispatchers.Main) { onDraftCreated() }
+                return@launch
             }
+
+            // 2. Tạo bản nháp và lưu vào Room DB với trạng thái UPLOADING
+            val draftId = UUID.randomUUID().toString()
+            val draft = DraftEntity(
+                id = draftId,
+                imageUri = draftImageFile.absolutePath,
+                caption = caption,
+                songName = song?.trackName,
+                artistName = song?.artistName,
+                artworkUrl = song?.artworkUrl100,
+                previewUrl = song?.previewUrl,
+                status = "UPLOADING"
+            )
+            draftDao.saveDraft(draft)
+
+            // Báo cho UI quay về Camera
+            withContext(Dispatchers.Main) { onDraftCreated() }
+
+            // 3. Tiến hành Upload ngầm
+            executeBackgroundPost(draft)
+        }
+    }
+
+    /**
+     * Thực hiện Upload Supabase & Firebase
+     * Dùng cho cả lúc đăng bài mới lẫn lúc nhấn Retry bản nháp cũ.
+     */
+    fun retryPost(draft: DraftEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uploadingDraft = draft.copy(status = "UPLOADING")
+            draftDao.saveDraft(uploadingDraft)
+            executeBackgroundPost(uploadingDraft)
+        }
+    }
+
+    private suspend fun executeBackgroundPost(draft: DraftEntity) {
+        try {
+            val file = File(draft.imageUri)
+            if (!file.exists()) {
+                Log.e("PhotoViewModel", "executeBackgroundPost: File not found!")
+                draftDao.saveDraft(draft.copy(status = "FAILED"))
+                return
+            }
+
+            val bytes = file.readBytes()
+            Log.d("PhotoViewModel", "executeBackgroundPost: uploading ${bytes.size} bytes...")
+            val imageUrl = postRepository.uploadImageToSupabase(bytes)
+
+            if (imageUrl.isNullOrEmpty()) {
+                Log.e("PhotoViewModel", "executeBackgroundPost: Supabase upload FAILED")
+                draftDao.saveDraft(draft.copy(status = "FAILED"))
+                return
+            }
+
+            val currentUserId = FirebaseClientService.auth.currentUser?.phoneNumber
+                ?: FirebaseClientService.auth.currentUser?.uid
+                ?: "unknown"
+
+            val post = PostModel(
+                userId = currentUserId,
+                imageUrl = imageUrl,
+                caption = draft.caption,
+                songName = draft.songName,
+                artistName = draft.artistName,
+                previewUrl = draft.previewUrl
+            )
+            
+            val saved = postRepository.savePost(post)
+            if (saved) {
+                Log.d("PhotoViewModel", "executeBackgroundPost: Firebase RTDB savePost OK")
+                // Thành công -> xóa bản nháp, lưu ảnh vào local DB
+                draftDao.deleteDraft(draft.id)
+                repository.insertPhoto(PhotoEntity(filePath = file.absolutePath))
+            } else {
+                Log.e("PhotoViewModel", "executeBackgroundPost: Firebase RTDB savePost FAILED")
+                draftDao.saveDraft(draft.copy(status = "FAILED"))
+            }
+
+        } catch (e: Exception) {
+            Log.e("PhotoViewModel", "executeBackgroundPost: EXCEPTION", e)
+            draftDao.saveDraft(draft.copy(status = "FAILED"))
         }
     }
 
@@ -281,12 +312,13 @@ class PhotoViewModel(
 class PhotoViewModelFactory(
     private val application: Application,
     private val repository: PhotoRepository,
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val draftDao: DraftDao
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PhotoViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return PhotoViewModel(application, repository, postRepository) as T
+            return PhotoViewModel(application, repository, postRepository, draftDao) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

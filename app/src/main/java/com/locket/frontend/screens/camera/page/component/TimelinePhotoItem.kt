@@ -8,9 +8,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +45,10 @@ import java.util.Locale
 @Composable
 fun TimelinePhotoItem(
     post: PostModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDraft: Boolean = false,
+    draftStatus: String? = null,
+    onRetry: () -> Unit = {}
 ) {
     val formattedDateTime = run {
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
@@ -70,24 +77,60 @@ fun TimelinePhotoItem(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            // Ảnh bài đăng (load từ URL Supabase)
-            AsyncImage(
-                model = post.imageUrl,
-                contentDescription = "Khoảnh khắc Locket",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(52.dp))
-                    .background(Color(0xFF191919))
-                    .border(
-                        6.dp,
-                        Brush.linearGradient(listOf(Color(0xFFFFCC00), Color(0xFFFF9100))),
-                        RoundedCornerShape(52.dp)
+            // Ảnh bài đăng (load từ URL Supabase hoặc local draft)
+            Box(contentAlignment = Alignment.Center) {
+                AsyncImage(
+                    model = if (isDraft) java.io.File(post.imageUrl) else post.imageUrl,
+                    contentDescription = "Khoảnh khắc Locket",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(52.dp))
+                        .background(Color(0xFF191919))
+                        .border(
+                            6.dp,
+                            Brush.linearGradient(listOf(Color(0xFFFFCC00), Color(0xFFFF9100))),
+                            RoundedCornerShape(52.dp)
+                        )
+                        .padding(6.dp)
+                        .clip(RoundedCornerShape(46.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                if (isDraft) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(52.dp))
+                            .background(Color.Black.copy(alpha = 0.6f))
                     )
-                    .padding(6.dp)
-                    .clip(RoundedCornerShape(46.dp)),
-                contentScale = ContentScale.Crop
-            )
+                    
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (draftStatus == "FAILED") {
+                            Icon(
+                                Icons.Default.Error,
+                                contentDescription = "Error",
+                                tint = Color.Red,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Đăng bài thất bại", color = Color.White, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = onRetry,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFCC00))
+                            ) {
+                                Text("Thử lại", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            CircularProgressIndicator(color = Color(0xFFFFCC00))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Đang tải lên...", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 

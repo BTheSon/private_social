@@ -18,14 +18,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import com.locket.backend.domain.database.DraftEntity
 import com.locket.backend.domain.post.PostModel
 
 @Composable
 fun TimelineHistoryPage(
     posts: List<PostModel>,
+    failedDrafts: List<DraftEntity> = emptyList(),
+    onRetryDraft: (DraftEntity) -> Unit = {},
     onBackClick: () -> Unit
 ) {
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { posts.size })
+    val totalItems = posts.size + failedDrafts.size
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { totalItems })
 
     Column(
         modifier = Modifier
@@ -66,7 +70,7 @@ fun TimelineHistoryPage(
         HorizontalDivider(color = Color(0xFF222222), thickness = 1.dp)
 
         // Content
-        if (posts.isEmpty()) {
+        if (totalItems == 0) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center
@@ -102,12 +106,37 @@ fun TimelineHistoryPage(
             VerticalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                key = { page -> posts[page].id.ifEmpty { page.toString() } }
+                key = { page -> 
+                    if (page < failedDrafts.size) failedDrafts[page].id
+                    else posts[page - failedDrafts.size].id.ifEmpty { page.toString() }
+                }
             ) { page ->
-                TimelinePhotoItem(
-                    post = posts[page],
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (page < failedDrafts.size) {
+                    val draft = failedDrafts[page]
+                    val mappedPost = PostModel(
+                        id = draft.id,
+                        userId = "",
+                        imageUrl = draft.imageUri,
+                        caption = draft.caption,
+                        songName = draft.songName,
+                        artistName = draft.artistName,
+                        previewUrl = draft.previewUrl,
+                        createdAt = draft.createdAt
+                    )
+                    TimelinePhotoItem(
+                        post = mappedPost,
+                        modifier = Modifier.fillMaxSize(),
+                        isDraft = true,
+                        draftStatus = draft.status,
+                        onRetry = { onRetryDraft(draft) }
+                    )
+                } else {
+                    val post = posts[page - failedDrafts.size]
+                    TimelinePhotoItem(
+                        post = post,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     }

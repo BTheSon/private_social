@@ -37,6 +37,7 @@ fun CameraContent(
     val isCapturing by photoViewModel.isCapturing.collectAsState()
     val lensFacing by photoViewModel.currentLensFacing.collectAsState()
     val posts by postViewModel.posts.collectAsState()
+    val pendingDrafts by postViewModel.pendingDrafts.collectAsState()
     val musicSearchResults by postViewModel.searchResults.collectAsState()
 
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
@@ -116,6 +117,8 @@ fun CameraContent(
                 1 -> {
                     TimelineHistoryPage(
                         posts = posts,
+                        failedDrafts = pendingDrafts,
+                        onRetryDraft = { draft -> photoViewModel.retryPost(draft) },
                         onBackClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
                     )
                 }
@@ -138,23 +141,16 @@ fun CameraContent(
                 pendingSelectedSong = null
             },
             onConfirm = {
-                pendingPhotoFile?.let { tempFile ->
-                    photoViewModel.processAndPost(
-                        context = context,
-                        tempFile = tempFile,
-                        caption = pendingCaption,
-                        song = pendingSelectedSong
-                    ) { success ->
-                        if (success) {
-                            Toast.makeText(context, "Đăng khoảnh khắc thành công! 🎉", Toast.LENGTH_SHORT).show()
-                            postViewModel.loadPosts() // refresh timeline
-                        } else {
-                            Toast.makeText(context, "Đăng thất bại, thử lại sau!", Toast.LENGTH_SHORT).show()
-                        }
-                        pendingPhotoFile = null
-                        pendingCaption = ""
-                        pendingSelectedSong = null
-                    }
+                photoViewModel.initiatePost(
+                    context = context,
+                    tempFile = pendingPhotoFile!!,
+                    caption = pendingCaption,
+                    song = pendingSelectedSong
+                ) {
+                    Toast.makeText(context, "Đang tải lên...", Toast.LENGTH_SHORT).show()
+                    pendingPhotoFile = null
+                    pendingCaption = ""
+                    pendingSelectedSong = null
                 }
             }
         )
