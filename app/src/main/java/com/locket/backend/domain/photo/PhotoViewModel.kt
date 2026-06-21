@@ -226,6 +226,20 @@ class PhotoViewModel(
         }
     }
 
+    fun uriToTempFile(context: Context, uri: Uri): File? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val tempFile = File(context.cacheDir, "temp_gallery_${System.currentTimeMillis()}.jpg")
+            tempFile.outputStream().use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+            tempFile
+        } catch (e: Exception) {
+            Log.e("PhotoViewModel", "Error copying image from gallery", e)
+            null
+        }
+    }
+
     fun deletePhoto(photo: PhotoEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.deletePhoto(photo)

@@ -1,6 +1,9 @@
 package com.locket.frontend.screens.camera.page
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -51,6 +54,22 @@ fun CameraContent(
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val isCameraActive = pagerState.currentPage == 0 && pendingPhotoFile == null
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                val file = photoViewModel.uriToTempFile(context, uri)
+                if (file != null) {
+                    pendingPhotoFile = file
+                    pendingCaption = ""
+                    pendingSelectedSong = null
+                } else {
+                    Toast.makeText(context, "Lỗi khi tải ảnh từ thư viện", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    )
 
     // 1. Dialog tìm kiếm nhạc (hiển thị overlay từ bất cứ đâu trong Camera flow)
     if (showMusicDialog) {
@@ -109,7 +128,9 @@ fun CameraContent(
                         },
                         onSwitchLensClick = { photoViewModel.toggleLensFacing() },
                         onGalleryClick = {
-                            // TODO: chức năng tải ảnh từ thư viện sẽ do người khác làm
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
                         }
                     )
                 }
