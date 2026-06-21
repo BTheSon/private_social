@@ -2,19 +2,19 @@
 
 ## Chức năng cơ bản
 
-| Yêu cầu                     | Chức năng trong app                                                                                                        |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **Layouts, Views**          | Màn hình Feed, Đăng bài, Bạn bè, Profile xây dựng bằng Jetpack Compose (`Scaffold`, `LazyColumn`, `Card`, `Row`, `Column`) |
-| **Dialog / Toast**          | AlertDialog xác nhận xoá bài viết, Toast thông báo đăng bài thành công/thất bại                                            |
-| **Menu**                    | Bottom Navigation gồm Feed - Đăng bài - Bạn bè - Profile                                                                   |
-| **Intent**                  | Mở Camera chụp ảnh, mở Gallery chọn ảnh, mở màn hình chi tiết bài viết                                                     |
-| **Service**                 | WorkManager đồng bộ danh sách bạn bè và làm mới dữ liệu nền                                                                |
-| **Navigation**              | Navigation Compose quản lý điều hướng giữa các màn hình                                                                    |
-| **Content Provider**        | Truy cập thư viện ảnh và danh bạ điện thoại (`ContactsContract`)                                                           |
-| **Room Database**           | Lưu bản nháp bài viết và thông tin người dùng cục bộ                                                                       |
-| **Web API** *(cộng điểm)*   | iTunes Search API tìm kiếm bài hát                                                                                         |
-| **Animation** *(cộng điểm)* | AnimatedVisibility, Crossfade, hiệu ứng Like                                                                               |
-| **Firebase** *(cộng điểm)*  | Firebase Authentication (Phone Auth), Firestore                                                                            |
+| Yêu cầu                 | Chức năng trong app                                                                  | File / Vị trí triển khai (Tên hàm, Class)                                                   |
+|:------------------------|:-------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------|
+| **Layouts, Views**      | Màn hình Feed, Đăng bài, Bạn bè, Profile xây dựng bằng Jetpack Compose               | `MainScreen.kt` (Hàm `MainScreen`), `ProfileScreen.kt`, `CameraScreen.kt`                   |
+| **Dialog / Toast**      | AlertDialog xác nhận xoá bài viết/đăng xuất, Toast thông báo                         | `LogoutDialog.kt` (Hàm `LogoutDialog`), `DeletePhotoDialog.kt`, dùng `Toast.makeText`       |
+| **Menu**                | Bottom Navigation gồm 3 tab: Máy ảnh (kết hợp Feed & Đăng bài) - Bạn bè - Profile    | `MainScreen.kt` (Phần Box chứa Row các `IconButton` ở cuối hàm)                             |
+| **Intent**              | CameraX nhúng trực tiếp, chọn ảnh với `PickVisualMedia` thay cho Intent truyền thống | `CameraContent.kt` (`ActivityResultContracts.PickVisualMedia()`), `CameraViewfinderPage.kt` |
+| **Service**             | WorkManager xử lý đăng bài nền (Background Upload) và tự động retry khi có mạng                                            | `PostUploadWorker.kt` (Class `PostUploadWorker`, hàm `doWork`)                          |
+| **Navigation**          | Navigation Compose quản lý màn hình                                                  | `MainActivity.kt` (Class `MainActivity`, khối `NavHost`)                                    |
+| **Content Provider**    | Truy cập danh bạ điện thoại (`ContactsContract`)                                     | `ContactsReader.kt` (Class `ContactsReader`, hàm `readContacts()`)                          |
+| **Room Database**       | Lưu bản nháp và thông tin người dùng cục bộ                                          | `MDatabase.kt` (Class `MDatabase`, `DraftDao`, `UserDao`)                                   |
+| **Web API** *(Bonus)*   | iTunes Search API tìm bài hát                                                        | `ItunesApiService.kt` (Hàm `searchSongs()`), `SongSearchDialog.kt`                          |
+| **Animation** *(Bonus)* | `AnimatedVisibility`, `animateFloatAsState` (Scale hiệu ứng Camera)                  | `PendingPhotoConfirmationScreen.kt` (`AnimatedVisibility`), `CameraViewfinderPage.kt`       |
+| **Firebase** *(Bonus)*  | Firebase Phone Auth, Firebase Realtime Database                                      | `AuthViewModel.kt` (`signInWithPhoneAuthCredential`), `FirebaseClientService.kt`            |
 
 ---
 
@@ -31,13 +31,13 @@
 
 ### 2. Đăng bài
 
-* Chụp ảnh bằng CameraX.
+* Chụp ảnh bằng CameraX nhúng trực tiếp.
 * Hoặc chọn ảnh từ thư viện.
 * Nhập caption.
 * Tìm kiếm bài hát bằng iTunes Search API.
 * Đính kèm bài hát vào bài viết.
 * Upload ảnh lên Supabase Storage.
-* Lưu thông tin bài viết vào Firestore.
+* Lưu thông tin bài viết vào Firebase Realtime Database.
 
 ---
 
@@ -52,7 +52,7 @@
   * Nghệ sĩ
   * Thời gian đăng
 * Like bài viết.
-* Hỗ trợ xem offline với Firestore Cache và Coil Disk Cache.
+* Hỗ trợ xem mượt mà với Coil Disk Cache.
 
 ---
 
@@ -68,7 +68,6 @@
 ### 5. Hồ sơ cá nhân
 
 * Xem thông tin cá nhân.
-* Xem danh sách bài viết đã đăng.
 * Chỉnh sửa tên hiển thị.
 * Xoá bài viết.
 
@@ -86,33 +85,36 @@
 
 ---
 
-### 7. Hỗ trợ ngoại tuyến (Offline)
+### 7. Hỗ trợ ngoại tuyến (Offline) & Tác vụ nền
 
-* Firestore Offline Persistence lưu cache dữ liệu bài viết.
+* Tự động đăng bài nền với **WorkManager**: Cho phép người dùng tắt app hoặc mất mạng, hệ thống tự động lưu vào hàng đợi và upload khi có mạng lại.
+* Firebase Realtime Database cache dữ liệu cục bộ.
 * Coil Disk Cache lưu cache ảnh đã xem.
-* Room lưu dữ liệu cục bộ:
+* Room lưu dữ liệu cục bộ vững chắc:
 
   * Thông tin người dùng.
   * Bản nháp bài viết.
+  * Thông tin bạn bè.
 * Người dùng vẫn có thể xem các bài viết và ảnh đã tải trước đó khi mất kết nối mạng.
 
 ---
 
-## Công nghệ sử dụng
+## Công nghệ sử dụng và File triển khai
 
-| Thành phần           | Công nghệ                     |
-| -------------------- | ----------------------------- |
-| UI                   | Jetpack Compose               |
-| Navigation           | Navigation Compose            |
-| State Management     | ViewModel + StateFlow         |
-| Local Database       | Room                          |
-| Authentication       | Firebase Phone Authentication |
-| Cloud Database       | Realtime Database             |
-| Storage              | Supabase Storage              |
-| Music Search         | iTunes Search API             |
-| Image Loading        | Coil Compose                  |
-| Background Task      | WorkManager                   |
-| Architecture         | MVVM                          |
+| Thành phần       | Công nghệ                     | File / Vị trí triển khai chính                                                              |
+|------------------|-------------------------------|---------------------------------------------------------------------------------------------|
+| UI               | Jetpack Compose               | `MainScreen.kt`, `CameraScreen.kt`, `FriendScreen.kt`, `ProfileScreen.kt`                   |
+| Navigation       | Navigation Compose            | `MainActivity.kt` (NavHost)                                                                 |
+| State Management | ViewModel + StateFlow         | `PostViewModel.kt`, `AuthViewModel.kt`, `PhotoViewModel.kt`, `ProfileViewModel.kt`          |
+| Local Database   | Room                          | `MDatabase.kt`, `DraftDao.kt`, `UserDao.kt`, `FriendDao.kt`, `PhotoDao.kt`                  |
+| Authentication   | Firebase Phone Authentication | `FirebaseClientService.kt`, `AuthScreen.kt`                                                 |
+| Cloud Database   | Realtime Database             | `FirebaseClientService.kt`, `PostRepository.kt`, `UserRepository.kt`, `FriendRepository.kt` |
+| Storage          | Supabase Storage              | `SupabaseClientService.kt`, `PostRepository.kt`                                             |
+| Music Search     | iTunes Search API             | `ItunesApiService.kt`, `SongSearchDialog.kt`                                                |
+| Image Loading    | Coil Compose                  | `TimelinePhotoItem.kt`, `GalleryScreen.kt`, `PendingPhotoConfirmationScreen.kt`             |
+| Background Task  | WorkManager                   | `SyncContactsWorker.kt`                                                                     |
+| Content Provider | ContactsContract              | `ContactsReader.kt`, `ContactProvider.kt`                                                   |
+| Architecture     | MVVM                          | Kiến trúc chia tách rõ ràng 2 package `backend/domain` và `frontend/screens`                |
 
 ---
 
@@ -170,12 +172,11 @@ avatarUrl
 LoginScreen
 
 MainScreen
- ├── FeedScreen
- ├── CreatePostScreen
- ├── FriendsScreen
+ ├── CameraScreen (gộp chung tính năng Feed và Đăng bài)
+ ├── FriendScreen
  └── ProfileScreen
 
-PostDetailScreen
+GalleryScreen
 ```
 
 ---
@@ -186,7 +187,7 @@ PostDetailScreen
 Firebase Phone Auth
         │
         ▼
-     Firestore
+  Realtime Database
         │
         ├── Users
         ├── Posts
@@ -199,6 +200,7 @@ Supabase Storage
 Room
         │
         ├── UserProfile
+        ├── Friends
         └── DraftPost
 
 iTunes API

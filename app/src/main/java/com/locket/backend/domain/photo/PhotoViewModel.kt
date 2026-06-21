@@ -192,8 +192,8 @@ class PhotoViewModel(
             // Báo cho UI quay về Camera
             withContext(Dispatchers.Main) { onDraftCreated() }
 
-            // 3. Tiến hành Upload ngầm
-            executeBackgroundPost(draft)
+            // 3. Tiến hành Upload ngầm bằng WorkManager
+            enqueueWorker(draft)
         }
     }
 
@@ -205,73 +205,21 @@ class PhotoViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val uploadingDraft = draft.copy(status = "UPLOADING")
             draftDao.saveDraft(uploadingDraft)
-            executeBackgroundPost(uploadingDraft)
+            enqueueWorker(uploadingDraft)
         }
     }
 
-    private suspend fun executeBackgroundPost(draft: DraftEntity) {
-        try {
-            val file = File(draft.imageUri)
-            if (!file.exists()) {
-                Log.e("PhotoViewModel", "executeBackgroundPost: File not found!")
-                draftDao.saveDraft(draft.copy(status = "FAILED"))
-                return
-            }
-
-            val bytes = file.readBytes()
-            Log.d("PhotoViewModel", "executeBackgroundPost: uploading ${bytes.size} bytes...")
-            val imageUrl = postRepository.uploadImageToSupabase(bytes)
-
-            if (imageUrl.isNullOrEmpty()) {
-                Log.e("PhotoViewModel", "executeBackgroundPost: Supabase upload FAILED")
-                draftDao.saveDraft(draft.copy(status = "FAILED"))
-                return
-            }
-
-            val currentUser = FirebaseClientService.auth.currentUser
-            val currentUserId = currentUser?.phoneNumber
-                ?: currentUser?.uid
-                ?: "unknown"
-
-            var currentUserName = "User"
-            var currentUserAvatar = ""
-
-            try {
-                val snapshot = FirebaseClientService.database.reference.child("users").child(currentUserId).get().await()
-                if (snapshot.exists()) {
-                    currentUserName = snapshot.child("displayName").getValue(String::class.java) ?: "User"
-                    currentUserAvatar = snapshot.child("avatarUrl").getValue(String::class.java) ?: ""
-                }
-            } catch (e: Exception) {
-                Log.e("PhotoViewModel", "executeBackgroundPost: Error fetching user profile", e)
-            }
-
-            val post = PostModel(
-                userId = currentUserId,
-                imageUrl = imageUrl,
-                caption = draft.caption,
-                authorName = currentUserName,
-                authorAvatar = currentUserAvatar,
-                songName = draft.songName,
-                artistName = draft.artistName,
-                previewUrl = draft.previewUrl
-            )
-            
-            val saved = postRepository.savePost(post)
-            if (saved) {
-                Log.d("PhotoViewModel", "executeBackgroundPost: Firebase RTDB savePost OK")
-                // Thành công -> xóa bản nháp, lưu ảnh vào local DB
-                draftDao.deleteDraft(draft.id)
-                repository.insertPhoto(PhotoEntity(filePath = file.absolutePath))
-            } else {
-                Log.e("PhotoViewModel", "executeBackgroundPost: Firebase RTDB savePost FAILED")
-                draftDao.saveDraft(draft.copy(status = "FAILED"))
-            }
-
-        } catch (e: Exception) {
-            Log.e("PhotoViewModel", "executeBackgroundPost: EXCEPTION", e)
-            draftDao.saveDraft(draft.copy(status = "FAILED"))
-        }
+    private fun enqueueWorker(draft: DraftEntity) {
+        val workManager = androidx.work.WorkManager.getInstance(getApplication())
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+        val data = androidx.work.workDataOf(PostUploadWorker.KEY_DRAFT_ID to draft.id)
+        val request = androidx.work.OneTimeWorkRequestBuilder<PostUploadWorker>()
+            .setConstraints(constraints)
+            .setInputData(data)
+            .build()
+        workManager.enqueue(request)
     }
 
     fun uriToTempFile(context: Context, uri: Uri): File? {
