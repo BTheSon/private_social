@@ -141,7 +141,7 @@ private fun SuggestionRow(friend: FriendModel, onAddClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(friend.displayName, fontWeight = FontWeight.Medium, fontSize = 15.sp)
+            Text(friend.displayName, fontWeight = FontWeight.Medium, fontSize = 15.sp, color = Color.Gray)
             Text(friend.phoneNumber, color = Color.Gray, fontSize = 13.sp)
         }
         OutlinedButton(onClick = onAddClick) {
