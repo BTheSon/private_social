@@ -28,8 +28,7 @@ fun TimelineHistoryPage(
     onRetryDraft: (DraftEntity) -> Unit = {},
     onBackClick: () -> Unit
 ) {
-    val totalItems = posts.size + failedDrafts.size
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { totalItems })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { posts.size + failedDrafts.size })
 
     Column(
         modifier = Modifier
@@ -70,7 +69,7 @@ fun TimelineHistoryPage(
         HorizontalDivider(color = Color(0xFF222222), thickness = 1.dp)
 
         // Content
-        if (totalItems == 0) {
+        if (posts.isEmpty() && failedDrafts.isEmpty()) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center

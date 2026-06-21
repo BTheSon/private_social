@@ -208,7 +208,7 @@ fun PendingPhotoConfirmationScreen(
                 // Nút HỦY BỎ / GỬI ĐI
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(bottom = 24.dp)
+                    modifier = Modifier.padding(bottom = 100.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

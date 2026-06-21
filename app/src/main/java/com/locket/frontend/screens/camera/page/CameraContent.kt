@@ -53,6 +53,11 @@ fun CameraContent(
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val isCameraActive = pagerState.currentPage == 0 && pendingPhotoFile == null
 
+    // Khi danh sách draft thay đổi (upload xong → draft bị xóa), tải lại bài viết từ Firebase
+    LaunchedEffect(pendingDrafts) {
+        postViewModel.loadPosts()
+    }
+
     // 1. Dialog tìm kiếm nhạc (hiển thị overlay từ bất cứ đâu trong Camera flow)
     if (showMusicDialog) {
         SongSearchDialog(
@@ -151,6 +156,8 @@ fun CameraContent(
                     pendingPhotoFile = null
                     pendingCaption = ""
                     pendingSelectedSong = null
+                    // Tự động cuộn sang Timeline để user thấy trạng thái đang tải
+                    coroutineScope.launch { pagerState.animateScrollToPage(1) }
                 }
             }
         )
