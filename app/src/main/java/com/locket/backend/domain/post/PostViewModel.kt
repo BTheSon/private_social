@@ -37,11 +37,8 @@ class PostViewModel(
 
     fun searchMusic(query: String) {
         viewModelScope.launch {
-            _searchResults.value = if (query.isNotEmpty()) {
-                itunesRepository.searchSongs(query)
-            } else {
-                emptyList()
-            }
+            val searchTerm = if (query.trim().isEmpty()) "top hits" else query
+            _searchResults.value = itunesRepository.searchSongs(searchTerm)
         }
     }
 

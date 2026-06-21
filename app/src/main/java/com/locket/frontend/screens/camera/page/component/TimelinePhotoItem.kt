@@ -1,16 +1,26 @@
 package com.locket.frontend.screens.camera.page.component
 
+import android.media.MediaPlayer
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +50,16 @@ fun TimelinePhotoItem(
     val parts = formattedDateTime.split(" ")
     val dateStr = parts.getOrNull(0) ?: ""
     val timeStr = parts.getOrNull(1) ?: ""
+
+    val mediaPlayer = remember { MediaPlayer() }
+    var isPlaying by remember { mutableStateOf(false) }
+
+    DisposableEffect(post.id) {
+        onDispose {
+            if (mediaPlayer.isPlaying) mediaPlayer.stop()
+            mediaPlayer.release()
+        }
+    }
 
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -90,22 +110,76 @@ fun TimelinePhotoItem(
 
                 // Bài hát đính kèm
                 if (!post.songName.isNullOrEmpty()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(
                             Icons.Default.MusicNote,
                             contentDescription = null,
                             tint = Color(0xFFFFCC00),
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${post.songName}${if (!post.artistName.isNullOrEmpty()) " - ${post.artistName}" else ""}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFFFFCC00),
-                            maxLines = 1
-                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = post.songName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                            if (!post.artistName.isNullOrEmpty()) {
+                                Text(
+                                    text = post.artistName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Gray,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        
+                        if (!post.previewUrl.isNullOrEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    if (isPlaying) {
+                                        mediaPlayer.pause()
+                                        isPlaying = false
+                                    } else {
+                                        if (mediaPlayer.duration > 0) {
+                                            mediaPlayer.start()
+                                            isPlaying = true
+                                        } else {
+                                            mediaPlayer.reset()
+                                            mediaPlayer.setDataSource(post.previewUrl)
+                                            mediaPlayer.prepareAsync()
+                                            mediaPlayer.setOnPreparedListener {
+                                                it.start()
+                                                isPlaying = true
+                                            }
+                                            mediaPlayer.setOnCompletionListener {
+                                                isPlaying = false
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color(0xFF333333), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = "Nghe nhạc",
+                                    tint = Color(0xFFFFCC00),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
                 // Thời gian đăng
