@@ -8,7 +8,7 @@
 | **Dialog / Toast**      | AlertDialog xác nhận xoá bài viết/đăng xuất, Toast thông báo                         | `LogoutDialog.kt` (Hàm `LogoutDialog`), `DeletePhotoDialog.kt`, dùng `Toast.makeText`       |
 | **Menu**                | Bottom Navigation gồm 3 tab: Máy ảnh (kết hợp Feed & Đăng bài) - Bạn bè - Profile    | `MainScreen.kt` (Phần Box chứa Row các `IconButton` ở cuối hàm)                             |
 | **Intent**              | CameraX nhúng trực tiếp, chọn ảnh với `PickVisualMedia` thay cho Intent truyền thống | `CameraContent.kt` (`ActivityResultContracts.PickVisualMedia()`), `CameraViewfinderPage.kt` |
-| **Service**             | WorkManager xử lý đăng bài nền (Background Upload) và tự động retry khi có mạng                                            | `PostUploadWorker.kt` (Class `PostUploadWorker`, hàm `doWork`)                          |
+| **WorkManager**         | Xử lý đăng bài ngầm và duy trì tác vụ upload ổn định bằng WorkManager                                          | `PostUploadWorker.kt` (Class `PostUploadWorker`)                            |
 | **Navigation**          | Navigation Compose quản lý màn hình                                                  | `MainActivity.kt` (Class `MainActivity`, khối `NavHost`)                                    |
 | **Content Provider**    | Truy cập danh bạ điện thoại (`ContactsContract`)                                     | `ContactsReader.kt` (Class `ContactsReader`, hàm `readContacts()`)                          |
 | **Room Database**       | Lưu bản nháp và thông tin người dùng cục bộ                                          | `MDatabase.kt` (Class `MDatabase`, `DraftDao`, `UserDao`)                                   |
@@ -18,84 +18,62 @@
 
 ---
 
-## Chức năng chính
+## Các chức năng cốt lõi và luồng hoạt động chi tiết
 
-### 1. Đăng nhập bằng số điện thoại
-
-* Nhập số điện thoại.
-* Nhập OTP xác thực.
-* Firebase Authentication xử lý đăng nhập.
-* Tự động duy trì phiên đăng nhập.
-
----
-
-### 2. Đăng bài
-
-* Chụp ảnh bằng CameraX nhúng trực tiếp.
-* Hoặc chọn ảnh từ thư viện.
-* Nhập caption.
-* Tìm kiếm bài hát bằng iTunes Search API.
-* Đính kèm bài hát vào bài viết.
-* Upload ảnh lên Supabase Storage.
-* Lưu thông tin bài viết vào Firebase Realtime Database.
+### 1. Đăng nhập & Xác thực (Authentication)
+* **Luồng hoạt động chi tiết:**
+  1. Người dùng mở ứng dụng và nhập số điện thoại tại màn hình đăng nhập.
+  2. Ứng dụng gửi yêu cầu xác thực tới **Firebase Authentication**.
+  3. Firebase gửi mã OTP dạng SMS tới số điện thoại của người dùng.
+  4. Người dùng nhập mã OTP vào màn hình xác nhận.
+  5. Nếu OTP hợp lệ, Firebase trả về chứng chỉ đăng nhập (Credential). Ứng dụng tự động lưu trữ trạng thái phiên đăng nhập.
+  6. Ứng dụng kiểm tra người dùng đã tồn tại trên **Firebase Realtime Database** chưa. Nếu chưa, tạo mới User Profile (lưu UID, Số điện thoại) và đồng bộ thông tin về **Room Database** cục bộ.
+  7. Điều hướng người dùng vào màn hình chính (`MainScreen`).
 
 ---
 
-### 3. Feed bài viết
-
-* Xem bài viết từ bạn bè.
-* Hiển thị:
-
-  * Ảnh bài viết
-  * Caption
-  * Tên bài hát
-  * Nghệ sĩ
-  * Thời gian đăng
-* Like bài viết.
-* Hỗ trợ xem mượt mà với Coil Disk Cache.
-
----
-
-### 4. Gợi ý bạn bè
-
-* Đọc danh bạ điện thoại từ thiết bị.
-* Lấy danh sách số điện thoại.
-* So khớp với người dùng đã đăng ký trên hệ thống.
-* Hiển thị danh sách "Có thể bạn biết".
+### 2. Tạo và Đăng Bài Viết (Create Post)
+* **Luồng hoạt động chi tiết:**
+  1. Từ giao diện máy ảnh, người dùng có thể tương tác:
+     * **Chụp ảnh trực tiếp** bằng CameraX được nhúng ngay trên màn hình.
+     * **Chọn ảnh từ thư viện** thông qua thành phần hệ thống `PickVisualMedia`.
+  2. Ứng dụng chuyển sang trạng thái xác nhận ảnh. Tại đây, người dùng có thể nhập nội dung (caption).
+  3. (Tuỳ chọn) Người dùng mở tính năng tìm nhạc. Ứng dụng gọi **iTunes Search API** để tìm kiếm bài hát và gắn kèm dữ liệu bài hát vào bài viết.
+  4. **Lưu nháp tự động**: Bất kỳ thay đổi nào (ảnh, text, nhạc) đều tự động được ghi nhận vào **Room Database** dưới dạng bản nháp. Tính năng này giúp khôi phục nội dung nếu app vô tình bị đóng.
+  5. Khi nhấn "Đăng", nếu kết nối mạng ổn định:
+     * Ứng dụng tải ảnh lên hệ thống **Supabase Storage** và nhận về đường dẫn URL an toàn.
+     * Thông tin bài viết (bao gồm Caption, ImageURL, SongData, UserID) được lưu lên **Firebase Realtime Database**.
+     * Xoá bản nháp khỏi Room Database cục bộ sau khi đăng thành công.
+  6. **Đăng bài chạy ngầm**: Hệ thống sử dụng **WorkManager** (`PostUploadWorker`) để duy trì tiến trình upload ảnh. Điều này giúp tiến trình đăng bài được xử lý ổn định, liên tục ở dưới nền ngay cả khi người dùng chuyển sang màn hình khác.
 
 ---
 
-### 5. Hồ sơ cá nhân
-
-* Xem thông tin cá nhân.
-* Chỉnh sửa tên hiển thị.
-* Xoá bài viết.
-
----
-
-### 6. Bản nháp
-
-* Tự động lưu khi đang soạn bài.
-* Room lưu:
-
-  * Caption
-  * URI ảnh
-  * Thông tin bài hát
-* Khôi phục khi người dùng mở lại màn hình đăng bài.
+### 3. Tương Tác & Lướt Bảng Tin (New Feed)
+* **Luồng hoạt động chi tiết:**
+  1. Khi người dùng vào `MainScreen`, ứng dụng thực hiện truy xuất dữ liệu bài viết của bạn bè từ **Firebase Realtime Database**.
+  2. Dữ liệu này được cache bởi cơ chế cục bộ của Firebase, đảm bảo trải nghiệm **hỗ trợ ngoại tuyến (Offline)** liền mạch khi mạng yếu hoặc không có mạng.
+  3. Giao diện hiển thị danh sách bài viết theo thời gian thực gồm: ảnh, nội dung, bài hát đính kèm, tên nghệ sĩ, thông tin người đăng.
+  4. Hình ảnh được tải hiển thị và tối ưu bằng **Coil Disk Cache** (giúp không tải lại ảnh đã xem).
+  5. Người dùng tương tác (Like) bài viết. Hệ thống sẽ ngay lập tức đồng bộ thuộc tính `likeCount` lên Firebase theo thời gian thực.
 
 ---
 
-### 7. Hỗ trợ ngoại tuyến (Offline) & Tác vụ nền
+### 4. Đồng Bộ & Gợi Ý Kết Bạn (Friends & Contacts)
+* **Luồng hoạt động chi tiết:**
+  1. Lần đầu truy cập, người dùng được yêu cầu cấp quyền danh bạ. Ứng dụng dùng `ContactsContract` để đọc danh sách số điện thoại liên lạc trong thiết bị.
+  2. Danh sách số điện thoại này được mã hoá cơ bản và gửi lên **Firebase** để so khớp với tập dữ liệu người dùng trên hệ thống.
+  3. Trả về và hiển thị danh sách "Có thể bạn biết" trên tab `FriendScreen`.
+  4. Dữ liệu danh sách bạn bè được đồng bộ ngược về **Room Database** cục bộ để sử dụng ngoại tuyến.
 
-* Tự động đăng bài nền với **WorkManager**: Cho phép người dùng tắt app hoặc mất mạng, hệ thống tự động lưu vào hàng đợi và upload khi có mạng lại.
-* Firebase Realtime Database cache dữ liệu cục bộ.
-* Coil Disk Cache lưu cache ảnh đã xem.
-* Room lưu dữ liệu cục bộ vững chắc:
+---
 
-  * Thông tin người dùng.
-  * Bản nháp bài viết.
-  * Thông tin bạn bè.
-* Người dùng vẫn có thể xem các bài viết và ảnh đã tải trước đó khi mất kết nối mạng.
+### 5. Quản Lý Hồ Sơ Cá Nhân (Profile Management)
+* **Luồng hoạt động chi tiết:**
+  1. Người dùng chuyển sang tab `ProfileScreen`.
+  2. Thông tin User (Tên hiển thị, Ảnh đại diện, Số điện thoại) được tải cực nhanh từ **Room Database** cục bộ để hiển thị, đồng thời lắng nghe mọi sự thay đổi từ **Firebase** để update theo thời gian thực.
+  3. Người dùng cập nhật tên hiển thị. Dữ liệu được ghi nhận lên Firebase và phản hồi lại Room Database.
+  4. Xem bài viết cá nhân đã đăng. Khi xoá bài viết, ứng dụng hiển thị AlertDialog xác nhận. Quá trình xoá thực hiện gỡ bỏ ảnh trên **Supabase** và record tương ứng trên **Firebase**.
+  5. Đăng xuất: Ứng dụng gọi AlertDialog xác nhận. Nếu đồng ý, xoá sạch dữ liệu Room cục bộ, xoá chứng chỉ Firebase Authentication và điều hướng về trang đăng nhập.
 
 ---
 
@@ -112,7 +90,7 @@
 | Storage          | Supabase Storage              | `SupabaseClientService.kt`, `PostRepository.kt`                                             |
 | Music Search     | iTunes Search API             | `ItunesApiService.kt`, `SongSearchDialog.kt`                                                |
 | Image Loading    | Coil Compose                  | `TimelinePhotoItem.kt`, `GalleryScreen.kt`, `PendingPhotoConfirmationScreen.kt`             |
-| Background Task  | WorkManager                   | `SyncContactsWorker.kt`                                                                     |
+| Background Task  | WorkManager                   | `PostUploadWorker.kt`                                                                       |
 | Content Provider | ContactsContract              | `ContactsReader.kt`, `ContactProvider.kt`                                                   |
 | Architecture     | MVVM                          | Kiến trúc chia tách rõ ràng 2 package `backend/domain` và `frontend/screens`                |
 
@@ -123,25 +101,25 @@
 ### User
 
 ```text
-uid
 phoneNumber
 displayName
 avatarUrl
-createdAt
 ```
 
 ### Post
 
 ```text
-postId
+id
 userId
-caption
 imageUrl
+caption
+authorName
+authorAvatar
 songName
 artistName
 previewUrl
 createdAt
-likeCount
+likedBy
 ```
 
 ### DraftPost (Room)
@@ -152,16 +130,19 @@ imageUri
 caption
 songName
 artistName
-updatedAt
+artworkUrl
+previewUrl
+status
+createdAt
 ```
 
-### UserProfile (Room)
+### UserEntity (Room)
 
 ```text
-uid
 phoneNumber
 displayName
 avatarUrl
+isMe
 ```
 
 ---
@@ -189,19 +170,21 @@ Firebase Phone Auth
         ▼
   Realtime Database
         │
-        ├── Users
-        ├── Posts
-        └── Friends
+        ├── users
+        ├── posts
+        └── friendships
 
 Supabase Storage
         │
-        └── Images
+        ├── post
+        └── avatars
 
 Room
         │
-        ├── UserProfile
-        ├── Friends
-        └── DraftPost
+        ├── UserEntity
+        ├── FriendshipEntity
+        ├── DraftEntity
+        └── PhotoEntity
 
 iTunes API
         │
