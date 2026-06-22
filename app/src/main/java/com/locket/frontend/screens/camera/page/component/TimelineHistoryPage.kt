@@ -9,6 +9,11 @@ import androidx.compose.material.icons.filled.PhotoAlbum
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.locket.frontend.screens.camera.page.component.dialog.DeletePhotoDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,6 +36,7 @@ fun TimelineHistoryPage(
     onBackClick: () -> Unit
 ) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { posts.size + failedDrafts.size })
+    var postToDelete by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -137,10 +143,20 @@ fun TimelineHistoryPage(
                         post = post,
                         modifier = Modifier.fillMaxSize(),
                         currentUserId = currentUserId,
-                        onDelete = { onDeletePost(post.id) }
+                        onDelete = { postToDelete = post.id }
                     )
                 }
             }
         }
+    }
+
+    postToDelete?.let { postId ->
+        DeletePhotoDialog(
+            onDismiss = { postToDelete = null },
+            onConfirm = {
+                onDeletePost(postId)
+                postToDelete = null
+            }
+        )
     }
 }
